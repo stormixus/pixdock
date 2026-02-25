@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  app:
+    image: pixdock:latest
+    ports:
+      - "8420:8420"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - RUST_LOG=swarm_dash=info
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: overlay

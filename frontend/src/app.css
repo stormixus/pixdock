@@ -1,0 +1,131 @@
+:root {
+  --bg-dark: #0a0a1a;
+  --bg-panel: #1a1a2e;
+  --bg-panel-light: #252540;
+  --border: #3a3a5c;
+  --text: #e0e0e0;
+  --text-dim: #8888aa;
+  --green: #4ade80;
+  --green-dark: #166534;
+  --red: #ef4444;
+  --red-dark: #7f1d1d;
+  --yellow: #fbbf24;
+  --blue: #60a5fa;
+  --purple: #a78bfa;
+  --pixel-size: 4px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Press Start 2P', monospace;
+  background-color: var(--bg-dark);
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.8;
+  image-rendering: pixelated;
+}
+
+/* Pixel border mixin via box-shadow */
+.pixel-border {
+  border: var(--pixel-size) solid var(--border);
+  image-rendering: pixelated;
+}
+
+.pixel-panel {
+  background: var(--bg-panel);
+  border: var(--pixel-size) solid var(--border);
+  padding: 16px;
+}
+
+/* Status colors */
+.status-ready { color: var(--green); }
+.status-down { color: var(--red); }
+.status-disconnected { color: var(--yellow); }
+.status-drain { color: var(--yellow); }
+
+/* HP bar style gauge */
+.gauge-bar {
+  height: 12px;
+  background: var(--bg-dark);
+  border: 2px solid var(--border);
+  position: relative;
+  image-rendering: pixelated;
+}
+
+.gauge-fill {
+  height: 100%;
+  transition: width 0.5s steps(10);
+}
+
+.gauge-fill.healthy { background: var(--green); }
+.gauge-fill.warning { background: var(--yellow); }
+.gauge-fill.critical { background: var(--red); }
+
+/* LED indicator */
+.led {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  image-rendering: pixelated;
+}
+
+.led-green {
+  background: var(--green);
+  box-shadow: 0 0 4px var(--green);
+}
+
+.led-red {
+  background: var(--red);
+  box-shadow: 0 0 4px var(--red);
+}
+
+.led-yellow {
+  background: var(--yellow);
+  box-shadow: 0 0 4px var(--yellow);
+}
+
+/* Blinking animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.blink {
+  animation: blink 1s steps(2) infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* CRT flicker (subtle) */
+@keyframes flicker {
+  0% { opacity: 0.97; }
+  5% { opacity: 0.95; }
+  10% { opacity: 0.97; }
+  15% { opacity: 0.94; }
+  20% { opacity: 0.98; }
+  100% { opacity: 0.98; }
+}
+
+body {
+  animation: flicker 4s steps(6) infinite;
+}
+
+/* Selection color */
+::selection {
+  background: var(--green);
+  color: var(--bg-dark);
+}
