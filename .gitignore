@@ -10,3 +10,7 @@ backend/static/
 
 # OS
 .DS_Store
+
+# Tool state
+.omc/
+.claude/
