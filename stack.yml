@@ -6,9 +6,9 @@ services:
     ports:
       - "8420:8420"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - RUST_LOG=swarm_dash=info
+      - RUST_LOG=pixdock=info
     deploy:
       replicas: 1
       placement:

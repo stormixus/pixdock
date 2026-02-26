@@ -24,5 +24,6 @@ COPY --from=backend-build /app/backend/target/release/pixdock /usr/local/bin/
 COPY --from=backend-build /app/backend/static /static
 
 EXPOSE 8420
-ENV RUST_LOG=swarm_dash=info
+WORKDIR /
+ENV RUST_LOG=pixdock=info
 CMD ["pixdock"]

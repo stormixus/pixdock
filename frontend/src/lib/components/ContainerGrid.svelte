@@ -1,8 +1,10 @@
 <script lang="ts">
   import { projects, addToast } from '$lib/stores/swarm';
   import { containerAction } from '$lib/utils/ws';
+  import LogViewer from './LogViewer.svelte';
 
   let actionLoading: string | null = $state(null);
+  let viewingLogs: { id: string; name: string } | null = $state(null);
 
   function stateColor(state: string): string {
     switch (state) {
@@ -78,6 +80,11 @@
             </div>
 
             <div class="ctr-actions">
+              <button
+                class="action-btn action-logs"
+                onclick={() => viewingLogs = { id: ctr.id, name: ctr.name }}
+                title="Logs"
+              >&#9776;</button>
               {#if ctr.state === 'running'}
                 <button
                   class="action-btn action-stop"
@@ -106,6 +113,14 @@
     </div>
   {/each}
 </div>
+
+{#if viewingLogs}
+  <LogViewer
+    containerId={viewingLogs.id}
+    containerName={viewingLogs.name}
+    onClose={() => viewingLogs = null}
+  />
+{/if}
 
 <style>
   .projects {
@@ -236,6 +251,11 @@
   .action-restart:hover:not(:disabled) {
     border-color: var(--yellow);
     color: var(--yellow);
+  }
+
+  .action-logs:hover:not(:disabled) {
+    border-color: var(--blue);
+    color: var(--blue);
   }
 
   .action-btn:disabled {

@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/PressStart2P.woff2') format('woff2');
+}
+
 :root {
   --bg-dark: #0a0a1a;
   --bg-panel: #1a1a2e;

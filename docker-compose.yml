@@ -6,7 +6,9 @@ services:
     ports:
       - "8420:8420"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - RUST_LOG=pixdock=debug
+      # Set PIXDOCK_TOKEN to enable bearer token auth (leave empty to disable)
+      # - PIXDOCK_TOKEN=your-secret-token
     restart: unless-stopped

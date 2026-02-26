@@ -70,23 +70,48 @@ export interface DashboardState {
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
+// Read token from meta tag or localStorage
+function getAuthToken(): string | null {
+  return localStorage.getItem('pixdock_token');
+}
+
+export function setAuthToken(token: string) {
+  localStorage.setItem('pixdock_token', token);
+}
+
+export function clearAuthToken() {
+  localStorage.removeItem('pixdock_token');
+}
+
+// Exponential backoff constants
+const RECONNECT_BASE_MS = 3000;
+const RECONNECT_MAX_MS = 60000;
+
 export function createWebSocket(
   onState: (state: DashboardState) => void,
   onStatus: (status: ConnectionStatus) => void
 ) {
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout>;
+  let reconnectAttempt = 0;
 
   function connect() {
     onStatus('connecting');
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${window.location.host}/ws`;
+    let url = `${protocol}//${window.location.host}/ws`;
+
+    // Append auth token as query parameter
+    const token = getAuthToken();
+    if (token) {
+      url += `?token=${encodeURIComponent(token)}`;
+    }
 
     ws = new WebSocket(url);
 
     ws.onopen = () => {
       onStatus('connected');
+      reconnectAttempt = 0; // Reset backoff on successful connection
     };
 
     ws.onmessage = (event) => {
@@ -100,7 +125,13 @@ export function createWebSocket(
 
     ws.onclose = () => {
       onStatus('disconnected');
-      reconnectTimer = setTimeout(connect, 3000);
+      // Exponential backoff with jitter
+      const delay = Math.min(
+        RECONNECT_BASE_MS * Math.pow(2, reconnectAttempt) + Math.random() * 1000,
+        RECONNECT_MAX_MS
+      );
+      reconnectAttempt++;
+      reconnectTimer = setTimeout(connect, delay);
     };
 
     ws.onerror = () => {
@@ -119,9 +150,22 @@ export function createWebSocket(
   return { disconnect };
 }
 
-// REST API helpers
+// REST API helpers - include auth header
+function authHeaders(): HeadersInit {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export async function fetchTasks(serviceId: string): Promise<SwarmTask[]> {
-  const res = await fetch(`/api/services/${serviceId}/tasks`);
+  const res = await fetch(`/api/services/${serviceId}/tasks`, {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error(`Failed to fetch tasks: ${res.status}`);
   return res.json();
 }
@@ -129,7 +173,7 @@ export async function fetchTasks(serviceId: string): Promise<SwarmTask[]> {
 export async function scaleService(serviceId: string, replicas: number): Promise<void> {
   const res = await fetch(`/api/services/${serviceId}/scale`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ replicas })
   });
   if (!res.ok) throw new Error(`Failed to scale service: ${res.status}`);
@@ -138,7 +182,7 @@ export async function scaleService(serviceId: string, replicas: number): Promise
 export async function containerAction(containerId: string, action: 'start' | 'stop' | 'restart'): Promise<void> {
   const res = await fetch(`/api/containers/${containerId}/action`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ action })
   });
   if (!res.ok) throw new Error(`Failed to ${action} container: ${res.status}`);

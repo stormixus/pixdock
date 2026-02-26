@@ -100,4 +100,38 @@ impl DockerClient {
         let path = format!("/containers/{}/restart", id);
         self.post_empty(&path).await
     }
+
+    /// Get container logs (recent lines)
+    pub async fn get_logs(&self, id: &str, tail: u32, timestamps: bool) -> Result<Vec<String>, super::client::DockerError> {
+        let path = format!(
+            "/containers/{}/logs?stdout=true&stderr=true&tail={}&timestamps={}",
+            id, tail, timestamps
+        );
+        let raw = self.get_raw(&path).await?;
+
+        // Docker multiplexed stream: each frame has 8-byte header
+        // [stream_type(1), 0, 0, 0, size(4 bytes big-endian)]
+        let mut lines = Vec::new();
+        let mut pos = 0;
+
+        while pos + 8 <= raw.len() {
+            // Skip stream type byte and 3 padding bytes
+            let size = u32::from_be_bytes([raw[pos + 4], raw[pos + 5], raw[pos + 6], raw[pos + 7]]) as usize;
+            pos += 8;
+
+            if pos + size > raw.len() {
+                break;
+            }
+
+            let line = String::from_utf8_lossy(&raw[pos..pos + size])
+                .trim_end()
+                .to_string();
+            if !line.is_empty() {
+                lines.push(line);
+            }
+            pos += size;
+        }
+
+        Ok(lines)
+    }
 }

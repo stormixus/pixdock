@@ -14,7 +14,7 @@
 </script>
 
 <svelte:head>
-  <title>SwarmDash</title>
+  <title>PixDock</title>
 </svelte:head>
 
 <Dashboard />

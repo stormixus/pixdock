@@ -37,7 +37,10 @@ pub struct SwarmTask {
 impl DockerClient {
     pub async fn list_services(&self) -> Result<Vec<SwarmService>, super::client::DockerError> {
         let raw: Vec<serde_json::Value> = self.get("/services").await?;
-        let tasks: Vec<serde_json::Value> = self.get("/tasks").await?;
+        // Only fetch running tasks to reduce payload
+        let filter = urlencoding::encode(r#"{"desired-state":["running"]}"#);
+        let tasks_path = format!("/tasks?filters={}", filter);
+        let tasks: Vec<serde_json::Value> = self.get(&tasks_path).await?;
 
         let services = raw
             .into_iter()
@@ -107,7 +110,9 @@ impl DockerClient {
 
     /// List tasks for a specific service
     pub async fn list_tasks(&self, service_id: &str) -> Result<Vec<SwarmTask>, super::client::DockerError> {
-        let path = format!("/tasks?filters={{\"service\":[\"{}\"]}}", service_id);
+        let filter_json = format!(r#"{{"service":["{}"]}}"#, service_id);
+        let filter = urlencoding::encode(&filter_json);
+        let path = format!("/tasks?filters={}", filter);
         let raw: Vec<serde_json::Value> = self.get(&path).await?;
 
         let tasks = raw

@@ -1,50 +1,85 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::sync::Arc;
 
-use crate::docker::client::DockerClient;
+use crate::state::AppState;
+
+#[derive(Deserialize)]
+pub struct LogsQuery {
+    pub tail: Option<u32>,
+    pub timestamps: Option<bool>,
+}
+
+/// Validate a Docker resource ID (container ID, service ID, or name).
+fn validate_docker_id(id: &str) -> Result<(), (StatusCode, Json<Value>)> {
+    if id.is_empty() || id.len() > 128 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Invalid resource ID: length must be 1-128 characters"})),
+        ));
+    }
+    if !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.') {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Invalid resource ID: only alphanumeric, hyphens, underscores, and dots allowed"})),
+        ));
+    }
+    Ok(())
+}
 
 pub async fn health() -> Json<Value> {
     Json(json!({"status": "ok"}))
 }
 
 pub async fn get_nodes(
-    State(docker): State<Arc<DockerClient>>,
-) -> Result<Json<Value>, StatusCode> {
-    match docker.list_nodes().await {
+    State(state): State<AppState>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    match state.docker.list_nodes().await {
         Ok(nodes) => Ok(Json(json!(nodes))),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("Failed to list nodes: {}", e)})),
+        )),
     }
 }
 
 pub async fn get_services(
-    State(docker): State<Arc<DockerClient>>,
-) -> Result<Json<Value>, StatusCode> {
-    match docker.list_services().await {
+    State(state): State<AppState>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    match state.docker.list_services().await {
         Ok(services) => Ok(Json(json!(services))),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("Failed to list services: {}", e)})),
+        )),
     }
 }
 
 pub async fn get_containers(
-    State(docker): State<Arc<DockerClient>>,
-) -> Result<Json<Value>, StatusCode> {
-    match docker.list_containers().await {
+    State(state): State<AppState>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    match state.docker.list_containers().await {
         Ok(containers) => Ok(Json(json!(containers))),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("Failed to list containers: {}", e)})),
+        )),
     }
 }
 
 pub async fn get_tasks(
-    State(docker): State<Arc<DockerClient>>,
+    State(state): State<AppState>,
     Path(service_id): Path<String>,
-) -> Result<Json<Value>, StatusCode> {
-    match docker.list_tasks(&service_id).await {
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    validate_docker_id(&service_id)?;
+    match state.docker.list_tasks(&service_id).await {
         Ok(tasks) => Ok(Json(json!(tasks))),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("Failed to list tasks: {}", e)})),
+        )),
     }
 }
 
@@ -53,42 +88,80 @@ pub struct ScaleRequest {
     pub replicas: u64,
 }
 
+const MAX_REPLICAS: u64 = 1000;
+
 pub async fn scale_service(
-    State(docker): State<Arc<DockerClient>>,
+    State(state): State<AppState>,
     Path(service_id): Path<String>,
     Json(payload): Json<ScaleRequest>,
-) -> Result<Json<Value>, StatusCode> {
-    match docker.scale_service(&service_id, payload.replicas).await {
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    validate_docker_id(&service_id)?;
+    if payload.replicas > MAX_REPLICAS {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("Replicas must be <= {}", MAX_REPLICAS)})),
+        ));
+    }
+    match state.docker.scale_service(&service_id, payload.replicas).await {
         Ok(()) => Ok(Json(json!({"status": "ok", "replicas": payload.replicas}))),
         Err(e) => {
             tracing::error!("Scale failed: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("Failed to scale service: {}", e)})),
+            ))
         }
     }
 }
 
 #[derive(Deserialize)]
-pub struct ContainerAction {
+pub struct ContainerActionRequest {
     pub action: String,
 }
 
-pub async fn container_action(
-    State(docker): State<Arc<DockerClient>>,
+pub async fn get_container_logs(
+    State(state): State<AppState>,
     Path(container_id): Path<String>,
-    Json(payload): Json<ContainerAction>,
-) -> Result<Json<Value>, StatusCode> {
+    Query(query): Query<LogsQuery>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    validate_docker_id(&container_id)?;
+    let tail = query.tail.unwrap_or(200).min(5000);
+    let timestamps = query.timestamps.unwrap_or(true);
+    match state.docker.get_logs(&container_id, tail, timestamps).await {
+        Ok(lines) => Ok(Json(json!({"lines": lines}))),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("Failed to get logs: {}", e)})),
+        )),
+    }
+}
+
+pub async fn container_action(
+    State(state): State<AppState>,
+    Path(container_id): Path<String>,
+    Json(payload): Json<ContainerActionRequest>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    validate_docker_id(&container_id)?;
     let result = match payload.action.as_str() {
-        "start" => docker.start_container(&container_id).await,
-        "stop" => docker.stop_container(&container_id).await,
-        "restart" => docker.restart_container(&container_id).await,
-        _ => return Err(StatusCode::BAD_REQUEST),
+        "start" => state.docker.start_container(&container_id).await,
+        "stop" => state.docker.stop_container(&container_id).await,
+        "restart" => state.docker.restart_container(&container_id).await,
+        _ => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("Unknown action: {}", payload.action)})),
+            ))
+        }
     };
 
     match result {
         Ok(()) => Ok(Json(json!({"status": "ok", "action": payload.action}))),
         Err(e) => {
             tracing::error!("Container action failed: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("Container action failed: {}", e)})),
+            ))
         }
     }
 }
