@@ -84,34 +84,34 @@ import BlinkText from '../components/BlinkText.astro'
           and starts the container. Done in about 15 seconds.
         </p>
 
-        <div class="code-block" data-lang="bash" style="margin-bottom: 16px;">
+        <pre class="code-block" data-lang="bash" style="margin-bottom: 16px;">
 <span class="comment"># Default install — port 8420, no auth</span>
 <span class="keyword">curl</span> <span class="flag">-fsSL</span> https://raw.githubusercontent.com/stormixus/pixdock/main/install.sh <span class="keyword">|</span> sh
-        </div>
+        </pre>
 
         <h3 style="font-family: var(--font-pixel); font-size: 9px; color: var(--neon-cyan); margin: 20px 0 12px;">
           ▸ OPTIONS
         </h3>
 
-        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+        <pre class="code-block" data-lang="bash" style="margin-bottom: 10px;">
 <span class="comment"># Custom port</span>
 <span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--port</span> <span class="string">9000</span>
-        </div>
+        </pre>
 
-        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+        <pre class="code-block" data-lang="bash" style="margin-bottom: 10px;">
 <span class="comment"># With bearer token authentication</span>
 <span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--token</span> <span class="string">my-super-secret-token</span>
-        </div>
+        </pre>
 
-        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+        <pre class="code-block" data-lang="bash" style="margin-bottom: 10px;">
 <span class="comment"># Non-interactive (skip confirmation, useful for CI/automation)</span>
 <span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--yes</span>
-        </div>
+        </pre>
 
-        <div class="code-block" data-lang="bash">
+        <pre class="code-block" data-lang="bash">
 <span class="comment"># Uninstall — removes container, image, and ~/.pixdock/</span>
 <span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--uninstall</span>
-        </div>
+        </pre>
 
         <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px; font-size: 12px;">
           <strong>What the install script does:</strong><br>
@@ -134,17 +134,17 @@ import BlinkText from '../components/BlinkText.astro'
           the frontend before deploying.
         </p>
 
-        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+        <pre class="code-block" data-lang="bash" style="margin-bottom: 10px;">
 <span class="comment"># Clone and build</span>
 <span class="keyword">git</span> clone https://github.com/stormixus/pixdock.git
 <span class="keyword">cd</span> pixdock
 <span class="keyword">docker</span> compose up <span class="flag">--build</span>
-        </div>
+        </pre>
 
-        <div class="code-block" data-lang="bash">
+        <pre class="code-block" data-lang="bash">
 <span class="comment"># With authentication enabled</span>
 <span class="keyword">PIXDOCK_TOKEN</span>=<span class="string">my-secret-token</span> <span class="keyword">docker</span> compose up <span class="flag">--build</span>
-        </div>
+        </pre>
 
         <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px;">
           The multi-stage Dockerfile handles everything: builds the Svelte frontend with Vite,
@@ -162,15 +162,15 @@ import BlinkText from '../components/BlinkText.astro'
           a Swarm cluster — PixDock will automatically detect Swarm mode and show the full cluster dashboard.
         </p>
 
-        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+        <pre class="code-block" data-lang="bash" style="margin-bottom: 10px;">
 <span class="comment"># Build the image</span>
 <span class="keyword">docker</span> build <span class="flag">-t</span> pixdock:latest <span class="string">.</span>
-        </div>
+        </pre>
 
-        <div class="code-block" data-lang="bash">
+        <pre class="code-block" data-lang="bash">
 <span class="comment"># Deploy as a Swarm stack</span>
 <span class="keyword">docker</span> stack deploy <span class="flag">-c</span> stack.yml pixdock
-        </div>
+        </pre>
 
         <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px;">
           The <code style="color: var(--neon-cyan);">stack.yml</code> includes placement constraints
@@ -189,18 +189,18 @@ import BlinkText from '../components/BlinkText.astro'
           hacking on the UI.
         </p>
 
-        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+        <pre class="code-block" data-lang="bash" style="margin-bottom: 10px;">
 <span class="comment"># Terminal 1 — Backend (Rust)</span>
 <span class="keyword">cd</span> backend
 <span class="keyword">cargo</span> run
-        </div>
+        </pre>
 
-        <div class="code-block" data-lang="bash">
+        <pre class="code-block" data-lang="bash">
 <span class="comment"># Terminal 2 — Frontend (Svelte + Vite, hot reload)</span>
 <span class="keyword">cd</span> frontend
 <span class="keyword">npm</span> install
 <span class="keyword">npm</span> run dev
-        </div>
+        </pre>
 
         <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px;">
           The Vite dev server proxies API calls to the Rust backend automatically. Changes to
