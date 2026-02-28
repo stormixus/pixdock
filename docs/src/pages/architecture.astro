@@ -26,7 +26,7 @@ import CrtMonitor from '../components/CrtMonitor.astro'
       </h2>
 
       <CrtMonitor>
-        <div class="arch-diagram">
+        <pre class="arch-diagram">
 <span class="hl-green">┌──────────────────────────────────────────────────────────────┐</span>
 <span class="hl-green">│                        BROWSER                               │</span>
 <span class="hl-green">│  ┌─────────────────────────────────────────────────────────┐ │</span>
@@ -53,8 +53,8 @@ import CrtMonitor from '../components/CrtMonitor.astro'
 <span class="hl-cyan">│  └────────────────┬────────────────┘                         │</span>
 <span class="hl-cyan">│                   │ HTTP over Unix Socket                    │</span>
 <span class="hl-cyan">└───────────────────┼──────────────────────────────────────────┘</span>
-                    │
-                    ▼
+                     │
+                     ▼
 <span class="hl-pink">┌──────────────────────────────────────────────────────────────┐</span>
 <span class="hl-pink">│                    DOCKER ENGINE                             │</span>
 <span class="hl-pink">│  /var/run/docker.sock  ·  API v1.43                          │</span>
@@ -62,7 +62,7 @@ import CrtMonitor from '../components/CrtMonitor.astro'
 <span class="hl-pink">│  │Containers│ │ Services │ │  Nodes   │ │    Tasks      │   │</span>
 <span class="hl-pink">│  └──────────┘ └──────────┘ └──────────┘ └───────────────┘   │</span>
 <span class="hl-pink">└──────────────────────────────────────────────────────────────┘</span>
-        </div>
+        </pre>
       </CrtMonitor>
 
       <hr class="rainbow-hr">
