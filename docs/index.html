@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PixDock — Pixel-art Docker Dashboard</title>
+  <meta name="description" content="Monitor and control Docker containers through a retro pixel-art interface with CRT scanlines, LED indicators, and HP-bar gauges.">
+  <meta property="og:title" content="PixDock — Pixel-art Docker Dashboard">
+  <meta property="og:description" content="Retro CRT dashboard for Docker. One-line install, zero config.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark: #0a0a1a;
+      --bg-panel: #1a1a2e;
+      --bg-panel-light: #252540;
+      --border: #3a3a5c;
+      --text: #e0e0e0;
+      --text-dim: #8888aa;
+      --green: #4ade80;
+      --green-dark: #166534;
+      --red: #ef4444;
+      --yellow: #fbbf24;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --pixel: 4px;
+    }
+
+    body {
+      font-family: 'Press Start 2P', monospace;
+      background: var(--bg-dark);
+      color: var(--text);
+      font-size: 10px;
+      line-height: 1.8;
+      image-rendering: pixelated;
+      overflow-x: hidden;
+      animation: flicker 4s steps(6) infinite;
+    }
+
+    /* CRT scanline overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.15) 2px,
+        rgba(0, 0, 0, 0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    @keyframes flicker {
+      0% { opacity: 0.97; }
+      5% { opacity: 0.95; }
+      10% { opacity: 0.97; }
+      15% { opacity: 0.94; }
+      20% { opacity: 0.98; }
+      100% { opacity: 0.98; }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { filter: drop-shadow(0 0 6px var(--green)); }
+      50% { filter: drop-shadow(0 0 12px var(--green)) drop-shadow(0 0 20px var(--green)); }
+    }
+
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    ::selection { background: var(--green); color: var(--bg-dark); }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { color: var(--purple); }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Hero ─────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 80px 0 60px;
+      animation: slide-up 0.6s ease-out;
+    }
+
+    .hero-logo {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+    }
+
+    .hero-logo .bracket { color: var(--green); }
+
+    .hero-title {
+      font-size: 32px;
+      color: var(--green);
+      text-shadow: 0 0 10px rgba(74, 222, 128, 0.5), 0 0 30px rgba(74, 222, 128, 0.2);
+      margin-bottom: 20px;
+      letter-spacing: 4px;
+    }
+
+    .hero-tagline {
+      font-size: 11px;
+      color: var(--text-dim);
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+
+    /* Install box */
+    .install-box {
+      background: var(--bg-panel);
+      border: var(--pixel) solid var(--border);
+      padding: 20px 24px;
+      max-width: 640px;
+      margin: 0 auto;
+      position: relative;
+      text-align: left;
+    }
+
+    .install-label {
+      font-size: 8px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .install-cmd {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .install-cmd code {
+      flex: 1;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--green);
+      word-break: break-all;
+      line-height: 2;
+    }
+
+    .install-cmd .prompt { color: var(--yellow); }
+
+    .copy-btn {
+      background: var(--bg-panel-light);
+      border: 2px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .copy-btn.copied {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* HP bar decoration */
+    .hp-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      margin: 40px auto 0;
+      max-width: 300px;
+    }
+
+    .hp-label { font-size: 8px; color: var(--green); }
+
+    .hp-track {
+      flex: 1;
+      height: 10px;
+      background: var(--bg-dark);
+      border: 2px solid var(--border);
+    }
+
+    .hp-fill {
+      height: 100%;
+      width: 100%;
+      background: var(--green);
+      transition: width 0.5s steps(10);
+    }
+
+    /* ── Features ─────────────────────────────────── */
+    .section {
+      padding: 60px 0;
+      animation: slide-up 0.6s ease-out;
+    }
+
+    .section-title {
+      font-size: 14px;
+      color: var(--blue);
+      text-align: center;
+      margin-bottom: 40px;
+      letter-spacing: 2px;
+    }
+
+    .section-title .dim { color: var(--text-dim); }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--bg-panel);
+      border: var(--pixel) solid var(--border);
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--blue);
+    }
+
+    .feature-icon {
+      font-size: 16px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .feature-name {
+      font-size: 10px;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 8px;
+      color: var(--text-dim);
+      line-height: 2;
+    }
+
+    /* LED dot in feature cards */
+    .led {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+    }
+
+    .led-green { background: var(--green); box-shadow: 0 0 4px var(--green); }
+    .led-blue { background: var(--blue); box-shadow: 0 0 4px var(--blue); }
+    .led-purple { background: var(--purple); box-shadow: 0 0 4px var(--purple); }
+    .led-yellow { background: var(--yellow); box-shadow: 0 0 4px var(--yellow); }
+    .led-red { background: var(--red); box-shadow: 0 0 4px var(--red); }
+
+    /* ── How it works ─────────────────────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      counter-reset: step;
+    }
+
+    .step {
+      background: var(--bg-panel);
+      border: var(--pixel) solid var(--border);
+      padding: 24px 20px;
+      position: relative;
+      counter-increment: step;
+    }
+
+    .step::before {
+      content: '0' counter(step);
+      font-size: 20px;
+      color: var(--purple);
+      text-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .step-title {
+      font-size: 10px;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 8px;
+      color: var(--text-dim);
+      line-height: 2;
+    }
+
+    .step-code {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      color: var(--yellow);
+      background: var(--bg-dark);
+      border: 2px solid var(--border);
+      padding: 10px 12px;
+      margin-top: 12px;
+      word-break: break-all;
+      line-height: 2;
+    }
+
+    /* ── Architecture ─────────────────────────────── */
+    .arch-diagram {
+      background: var(--bg-panel);
+      border: var(--pixel) solid var(--border);
+      padding: 24px;
+      font-size: 9px;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 2.2;
+      overflow-x: auto;
+    }
+
+    .arch-diagram .hl-green { color: var(--green); }
+    .arch-diagram .hl-blue { color: var(--blue); }
+    .arch-diagram .hl-purple { color: var(--purple); }
+    .arch-diagram .hl-yellow { color: var(--yellow); }
+
+    /* ── Footer ───────────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 40px 0 60px;
+      border-top: var(--pixel) solid var(--border);
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      font-size: 9px;
+      color: var(--text-dim);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--green); }
+
+    .footer-copy {
+      font-size: 8px;
+      color: var(--text-dim);
+    }
+
+    .footer-copy .heart { color: var(--red); }
+
+    /* ── Responsive ───────────────────────────────── */
+    @media (max-width: 600px) {
+      .hero { padding: 48px 0 40px; }
+      .hero-title { font-size: 20px; }
+      .install-cmd code { font-size: 7px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-logo"><span class="bracket">[</span>PX<span class="bracket">]</span> PIXDOCK</div>
+      <h1 class="hero-title">PIXDOCK</h1>
+      <p class="hero-tagline">Pixel-art Docker dashboard with retro CRT aesthetics. Monitor and control containers with LED indicators, HP-bar gauges, and scanline effects.</p>
+
+      <div class="install-box">
+        <div class="install-label">One-line install</div>
+        <div class="install-cmd">
+          <code><span class="prompt">$</span> curl -fsSL https://raw.githubusercontent.com/stormixus/pixdock/main/install.sh | sh</code>
+          <button class="copy-btn" onclick="copyInstall(this)">COPY</button>
+        </div>
+      </div>
+
+      <div class="hp-bar">
+        <span class="hp-label">HP</span>
+        <div class="hp-track"><div class="hp-fill"></div></div>
+        <span class="hp-label">100%</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title"><span class="dim">// </span>FEATURES</h2>
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-green"></span></span>
+          <div class="feature-name">AUTO-DETECT</div>
+          <div class="feature-desc">Swarm or Standalone mode, detected automatically. Zero configuration needed.</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-blue"></span></span>
+          <div class="feature-name">REAL-TIME</div>
+          <div class="feature-desc">Shared WebSocket broadcast every 3s. Scales to many concurrent clients.</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-yellow"></span></span>
+          <div class="feature-name">CONTROLS</div>
+          <div class="feature-desc">Start, stop, restart containers. Scale Swarm services with one click.</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-purple"></span></span>
+          <div class="feature-name">SWARM SUPPORT</div>
+          <div class="feature-desc">Node rack, services by stack, task details, and replica scaling.</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-red"></span></span>
+          <div class="feature-name">AUTH</div>
+          <div class="feature-desc">Optional bearer token auth via PIXDOCK_TOKEN. REST + WebSocket secured.</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-green"></span></span>
+          <div class="feature-name">PIXEL UI</div>
+          <div class="feature-desc">CRT scanlines, Press Start 2P font, LED indicators, HP-bar gauges.</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-blue"></span></span>
+          <div class="feature-name">CONTAINER LOGS</div>
+          <div class="feature-desc">Built-in log viewer with search, filter, and auto-refresh.</div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon"><span class="led led-yellow"></span></span>
+          <div class="feature-name">TINY FOOTPRINT</div>
+          <div class="feature-desc">Single binary, ~128MB memory limit, Alpine-based image. Air-gap ready.</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title"><span class="dim">// </span>HOW IT WORKS</h2>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-title">INSTALL</div>
+          <div class="step-desc">Run the one-liner. It pulls the image and sets up a compose file in ~/.pixdock/.</div>
+          <div class="step-code">curl -fsSL ...install.sh | sh</div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">CONFIGURE</div>
+          <div class="step-desc">Optionally set a port and auth token. Defaults work out of the box.</div>
+          <div class="step-code">--port 9000 --token my-secret</div>
+        </div>
+
+        <div class="step">
+          <div class="step-title">MONITOR</div>
+          <div class="step-desc">Open localhost:8420 and see all your containers in glorious pixel art.</div>
+          <div class="step-code">http://localhost:8420</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title"><span class="dim">// </span>ARCHITECTURE</h2>
+      <div class="arch-diagram">
+        <span class="hl-green">[Browser]</span>
+        &mdash;WebSocket&rarr;
+        <span class="hl-blue">[Rust/Axum :8420]</span>
+        &mdash;Unix Socket&rarr;
+        <span class="hl-purple">[Docker Engine]</span>
+        <br>
+        <span class="hl-yellow">Svelte 5 + TypeScript</span> &middot;
+        <span class="hl-yellow">Tokio async runtime</span> &middot;
+        <span class="hl-yellow">Docker API v1.43</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/stormixus/pixdock">GitHub</a>
+        <a href="https://github.com/stormixus/pixdock/issues">Issues</a>
+        <a href="https://github.com/stormixus/pixdock#api">API Docs</a>
+      </div>
+      <div class="footer-copy">
+        MIT License &middot; Made with <span class="heart">&lt;3</span> and pixels
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function copyInstall(btn) {
+      var cmd = 'curl -fsSL https://raw.githubusercontent.com/stormixus/pixdock/main/install.sh | sh';
+      navigator.clipboard.writeText(cmd).then(function() {
+        btn.textContent = 'COPIED!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>
