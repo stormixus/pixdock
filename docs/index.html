@@ -10,7 +10,7 @@
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -28,10 +28,12 @@
       --blue: #60a5fa;
       --purple: #a78bfa;
       --pixel: 4px;
+      --font-pixel: 'Press Start 2P', monospace;
+      --font-body: 'IBM Plex Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
     }
 
     body {
-      font-family: 'Press Start 2P', monospace;
+      font-family: var(--font-pixel);
       background: var(--bg-dark);
       color: var(--text);
       font-size: 10px;
@@ -117,10 +119,12 @@
     }
 
     .hero-tagline {
-      font-size: 11px;
+      font-family: var(--font-body);
+      font-size: 14px;
       color: var(--text-dim);
       max-width: 600px;
       margin: 0 auto 40px;
+      line-height: 1.7;
     }
 
     /* Install box */
@@ -253,9 +257,10 @@
     }
 
     .feature-desc {
-      font-size: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
       color: var(--text-dim);
-      line-height: 2;
+      line-height: 1.6;
     }
 
     /* LED dot in feature cards */
@@ -303,9 +308,10 @@
     }
 
     .step-desc {
-      font-size: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
       color: var(--text-dim);
-      line-height: 2;
+      line-height: 1.6;
     }
 
     .step-code {
@@ -325,10 +331,11 @@
       background: var(--bg-panel);
       border: var(--pixel) solid var(--border);
       padding: 24px;
-      font-size: 9px;
+      font-family: var(--font-body);
+      font-size: 13px;
       color: var(--text-dim);
       text-align: center;
-      line-height: 2.2;
+      line-height: 2;
       overflow-x: auto;
     }
 
@@ -353,7 +360,8 @@
     }
 
     .footer-links a {
-      font-size: 9px;
+      font-family: var(--font-body);
+      font-size: 13px;
       color: var(--text-dim);
       transition: color 0.2s;
     }
@@ -361,7 +369,8 @@
     .footer-links a:hover { color: var(--green); }
 
     .footer-copy {
-      font-size: 8px;
+      font-family: var(--font-body);
+      font-size: 12px;
       color: var(--text-dim);
     }
 
