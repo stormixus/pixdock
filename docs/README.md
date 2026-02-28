@@ -1,33 +1,30 @@
-# Astro Starter Kit: Minimal
+# PixDock 90s Retro Docs Site
 
-```sh
-npm create astro@latest -- --template minimal
-```
+This directory contains the documentation site for [PixDock](https://github.com/stormixus/pixdock), built using [Astro](https://astro.build) with a glorious 90s retro aesthetic! 📟
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## 🚀 Features
 
-## 🚀 Project Structure
+- 💾 **Pure 90s Web Aesthetic:** CRT scanlines, neon glowing text, and pixel-perfect framing.
+- 🚦 **Nostalgic Elements:** Hit counters, `<marquee>` banners, `<blink>` tags, and MIDI player UI.
+- ⚡ **Astro Powered:** Blazing fast static site generation.
 
-Inside of your Astro project, you'll see the following folders and files:
+## 🧞 Project Structure
 
 ```text
-/
-├── public/
+docs/
+├── public/                 # Static assets (images, fonts, icons)
 ├── src/
-│   └── pages/
-│       └── index.astro
+│   ├── components/         # 90s Retro specific components (HitCounter, BlinkText, AsciiArt)
+│   ├── layouts/            # RetroLayout.astro with CRT frames and GeoCities footers
+│   ├── pages/              # Astro pages (index, features, install, etc.)
+│   └── styles/             # Global 90s CSS (retro.css)
+├── astro.config.mjs        # Astro builder & GitHub Pages configuration
 └── package.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## 🛠️ Commands
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
+All commands are run from the `docs/` directory:
 
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
@@ -35,9 +32,9 @@ All commands are run from the root of the project, from a terminal:
 | `npm run dev`             | Starts local dev server at `localhost:4321`      |
 | `npm run build`           | Build your production site to `./dist/`          |
 | `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
 
-## 👀 Want to learn more?
+## 🚀 Deployment
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+This site is automatically deployed to GitHub pages via the `.github/workflows/pages.yml` file on merge to the `main` branch.
+
+All links and resources are set up to properly resolve under the `/pixdock/` base path config.
