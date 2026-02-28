@@ -622,12 +622,13 @@ a:visited {
   background: var(--bg-input);
   border: 2px solid var(--border);
   padding: 16px 20px;
-  font-family: var(--font-body);
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 13px;
   color: var(--neon-green);
   line-height: 1.7;
   overflow-x: auto;
   position: relative;
+  white-space: pre-wrap;
 }
 
 .code-block::before {
@@ -784,11 +785,11 @@ a:visited {
   background: var(--bg-panel);
   border: var(--pixel) solid var(--border);
   padding: 32px;
-  font-family: var(--font-retro);
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 18px;
   color: var(--text-dim);
   text-align: left;
-  line-height: 2;
+  line-height: 1.15;
   overflow-x: auto;
   white-space: pre;
   margin: 0 auto;

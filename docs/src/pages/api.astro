@@ -23,7 +23,7 @@ import RetroLayout from '../layouts/RetroLayout.astro'
         <h2 style="font-family: var(--font-pixel); font-size: 10px; color: var(--neon-green); margin-bottom: 12px;">
           ▸ BASE URL
         </h2>
-        <div class="code-block" data-lang="http">http://localhost:8420</div>
+        <pre class="code-block" data-lang="http">http://localhost:8420</pre>
         <p style="color: var(--text-dim); line-height: 1.8; margin-top: 12px; font-size: 13px;">
           Replace <code style="color: var(--neon-cyan);">localhost</code> with your server's IP and
           <code style="color: var(--neon-cyan);">8420</code> with your custom port if changed.
@@ -39,12 +39,12 @@ import RetroLayout from '../layouts/RetroLayout.astro'
           If <code style="color: var(--neon-yellow);">PIXDOCK_TOKEN</code> is set, all endpoints except
           <code style="color: var(--neon-green);">/api/health</code> require authentication.
         </p>
-        <div class="code-block" data-lang="http" style="margin-bottom: 10px;">
+        <pre class="code-block" data-lang="http" style="margin-bottom: 10px;">
 <span class="comment"># REST — send as header</span>
-<span class="keyword">Authorization:</span> <span class="string">Bearer your-token-here</span></div>
-        <div class="code-block" data-lang="http">
+<span class="keyword">Authorization:</span> <span class="string">Bearer your-token-here</span></pre>
+        <pre class="code-block" data-lang="http">
 <span class="comment"># WebSocket — send as query param</span>
-<span class="keyword">ws://</span>localhost:8420<span class="keyword">/ws</span><span class="string">?token=your-token-here</span></div>
+<span class="keyword">ws://</span>localhost:8420<span class="keyword">/ws</span><span class="string">?token=your-token-here</span></pre>
       </div>
 
       <hr class="rainbow-hr rainbow-hr--thin">
@@ -83,12 +83,12 @@ import RetroLayout from '../layouts/RetroLayout.astro'
           Upgrades to WebSocket and broadcasts <code style="color: var(--neon-cyan);">DashboardState</code>
           JSON every 3 seconds. Contains containers, services (Swarm), nodes (Swarm), and Docker info.
         </p>
-        <div class="code-block" data-lang="javascript">
+        <pre class="code-block" data-lang="javascript">
 <span class="keyword">const</span> ws = <span class="keyword">new</span> WebSocket(<span class="string">'ws://localhost:8420/ws?token=my-token'</span>);
 ws.onmessage = (e) =&gt; {'{'}
   <span class="keyword">const</span> state = JSON.parse(e.data);
   console.log(state.mode);  <span class="comment">// "swarm" or "standalone"</span>
-{'}'};</div>
+{'}'};</pre>
       </div>
 
       <!-- Container Action Detail -->
@@ -100,10 +100,10 @@ ws.onmessage = (e) =&gt; {'{'}
           Control a container. The <code style="color: var(--neon-cyan);">:id</code> is validated against
           <code style="color: var(--neon-yellow);">[a-zA-Z0-9_.-]&#123;1,128&#125;</code>.
         </p>
-        <div class="code-block" data-lang="bash">
+        <pre class="code-block" data-lang="bash">
 <span class="keyword">curl</span> <span class="flag">-X</span> POST localhost:8420/api/containers/my-app/action \
   <span class="flag">-H</span> <span class="string">"Authorization: Bearer token"</span> \
-  <span class="flag">-d</span> <span class="string">'{'{'}&quot;action&quot;: &quot;restart&quot;{'}'}'</span></div>
+  <span class="flag">-d</span> <span class="string">'{'{'}&quot;action&quot;: &quot;restart&quot;{'}'}'</span></pre>
         <table class="retro-table mt-3">
           <thead><tr><th>Action</th><th>Effect</th></tr></thead>
           <tbody>
@@ -122,9 +122,9 @@ ws.onmessage = (e) =&gt; {'{'}
         <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
           Fetch the last N lines of container log output. Returns plain text.
         </p>
-        <div class="code-block" data-lang="bash">
+        <pre class="code-block" data-lang="bash">
 <span class="keyword">curl</span> localhost:8420/api/containers/my-app/logs<span class="string">?tail=100&amp;timestamps=true</span> \
-  <span class="flag">-H</span> <span class="string">"Authorization: Bearer token"</span></div>
+  <span class="flag">-H</span> <span class="string">"Authorization: Bearer token"</span></pre>
         <table class="retro-table mt-3">
           <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
           <tbody>
@@ -142,8 +142,8 @@ ws.onmessage = (e) =&gt; {'{'}
         <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
           All errors return structured JSON. No stack traces, no info leakage.
         </p>
-        <div class="code-block" data-lang="json">
-{'{'} <span class="string">&quot;error&quot;</span>: <span class="string">&quot;invalid_action&quot;</span>, <span class="string">&quot;message&quot;</span>: <span class="string">&quot;Must be: start, stop, restart&quot;</span> {'}'}</div>
+        <pre class="code-block" data-lang="json">
+{'{'} <span class="string">&quot;error&quot;</span>: <span class="string">&quot;invalid_action&quot;</span>, <span class="string">&quot;message&quot;</span>: <span class="string">&quot;Must be: start, stop, restart&quot;</span> {'}'}</pre>
         <table class="retro-table mt-3">
           <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
           <tbody>
