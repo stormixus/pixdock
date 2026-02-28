@@ -1,0 +1,11 @@
+services:
+  pixdock:
+    image: ghcr.io/stormixus/pixdock:latest
+    ports:
+      - "${PIXDOCK_PORT:-8420}:8420"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - RUST_LOG=pixdock=info
+      - PIXDOCK_TOKEN=${PIXDOCK_TOKEN:-}
+    restart: unless-stopped

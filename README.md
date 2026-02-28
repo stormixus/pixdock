@@ -6,6 +6,30 @@ Monitor and control your Docker containers and Swarm services through a beautifu
 
 Works with both **Docker Swarm** and **standalone Docker** — auto-detected, zero config.
 
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/stormixus/pixdock/main/install.sh | sh
+```
+
+Options:
+
+```bash
+# Custom port
+curl -fsSL ... | sh -s -- --port 9000
+
+# With auth token
+curl -fsSL ... | sh -s -- --token my-secret
+
+# Non-interactive (CI/automation)
+curl -fsSL ... | sh -s -- --yes
+
+# Uninstall
+curl -fsSL ... | sh -s -- --uninstall
+```
+
+Requires Docker with the daemon running. Installs to `~/.pixdock/` and pulls the pre-built image from `ghcr.io/stormixus/pixdock`.
+
 ## Features
 
 - **Auto-detect mode** — Swarm or Standalone, no configuration needed
@@ -29,9 +53,9 @@ Works with both **Docker Swarm** and **standalone Docker** — auto-detected, ze
 - REST API for actions (start/stop/restart/scale/logs)
 - Bearer token auth on all endpoints (optional)
 
-## Quick Start
+## Development / Build from Source
 
-### Docker Compose (recommended)
+### Docker Compose
 
 ```bash
 # Without auth
@@ -50,7 +74,7 @@ docker build -t pixdock:latest .
 docker stack deploy -c stack.yml pixdock
 ```
 
-### Development
+### Local Development
 
 ```bash
 # Backend
