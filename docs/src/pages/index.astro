@@ -1,0 +1,277 @@
+---
+import RetroLayout from '../layouts/RetroLayout.astro'
+import AsciiArt from '../components/AsciiArt.astro'
+import HitCounter from '../components/HitCounter.astro'
+import WebRing from '../components/WebRing.astro'
+import MidiPlayer from '../components/MidiPlayer.astro'
+import CrtMonitor from '../components/CrtMonitor.astro'
+import BlinkText from '../components/BlinkText.astro'
+
+const base = import.meta.env.BASE_URL;
+---
+
+<RetroLayout title="PixDock — Pixel-art Docker Dashboard" activePage="home">
+
+  <!-- ═══ HERO ═══ -->
+  <section style="padding: 60px 0 40px;">
+    <div class="container animate-slide-up">
+
+      <AsciiArt />
+
+      <div class="text-center mb-4">
+        <span class="pixel-font" style="font-size: 8px; color: var(--text-dim); letter-spacing: 3px;">
+          [ PIXEL-ART DOCKER DASHBOARD ]
+        </span>
+      </div>
+
+      <h1 class="section-title section-title--green" style="font-size: 28px; margin-bottom: 20px;">
+        PIXDOCK
+      </h1>
+
+      <p style="text-align: center; max-width: 650px; margin: 0 auto 16px; color: var(--text-dim); font-size: 15px; line-height: 1.8;">
+        Monitor and control your Docker containers through a <span class="neon-green">beautiful retro CRT interface</span>.
+        LED indicators, HP-bar gauges, scanline effects — it's like your server room traveled back to <span class="neon-pink">1997</span>.
+      </p>
+
+      <p style="text-align: center; color: var(--text-dim); font-size: 13px;">
+        Works with both <span class="neon-cyan">Docker Swarm</span> and <span class="neon-cyan">Standalone Docker</span> — auto-detected, zero config.
+      </p>
+
+      <hr class="rainbow-hr">
+
+      <!-- INSTALL BOX -->
+      <div class="install-box">
+        <div class="install-box__label">
+          ▸ ONE-LINE INSTALL <BlinkText text="★ NEW!" />
+        </div>
+        <div class="install-box__cmd">
+          <code><span class="install-box__prompt">$</span> curl -fsSL https://raw.githubusercontent.com/stormixus/pixdock/main/install.sh | sh</code>
+          <button class="install-box__copy-btn" id="copy-btn">COPY</button>
+        </div>
+      </div>
+
+      <!-- HP BAR -->
+      <div style="max-width: 320px; margin: 30px auto 0;">
+        <div class="hp-bar">
+          <span class="hp-bar__label">HP</span>
+          <div class="hp-bar__track">
+            <div class="hp-bar__fill" style="width: 100%;"></div>
+          </div>
+          <span class="hp-bar__label">100%</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="rainbow-hr rainbow-hr--thin" style="margin: 0 auto; max-width: 960px;">
+
+  <!-- ═══ FEATURES PREVIEW ═══ -->
+  <section style="padding: 50px 0;">
+    <div class="container">
+      <h2 class="section-title section-title--cyan">
+        <span class="dim">// </span>FEATURES
+      </h2>
+
+      <div class="feature-grid">
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--green"></span></span>
+          <div class="feature-card__name">AUTO-DETECT</div>
+          <div class="feature-card__desc">
+            Swarm or Standalone mode — PixDock sniffs your Docker environment and configures itself.
+            No YAML editing. No flags. Just run it and it figures out what you need, like a good piece
+            of software from the golden age of computing should.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--cyan"></span></span>
+          <div class="feature-card__name">REAL-TIME BROADCAST</div>
+          <div class="feature-card__desc">
+            Shared WebSocket that broadcasts container state every 3 seconds. Open 10 tabs? 50 tabs?
+            PixDock doesn't care. One single background poller feeds them all. Your server's CPU
+            will thank you with a tiny, grateful pixel tear.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--yellow"></span></span>
+          <div class="feature-card__name">CONTAINER CONTROLS</div>
+          <div class="feature-card__desc">
+            Start, stop, restart — one click, one pixel button, one satisfying CRT blink. Scale
+            Swarm services up or down with the same pixel-perfect simplicity. It even validates
+            your replica count so you don't accidentally spin up 999 NGINX containers.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--purple"></span></span>
+          <div class="feature-card__name">SWARM SUPPORT<span class="badge-new">HOT!</span></div>
+          <div class="feature-card__desc">
+            Full Swarm dashboard — node rack with manager/worker indicators, services grouped by
+            stack, task details for each service, and replica scaling. Your cluster, rendered in
+            glorious 8-bit aesthetics.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--red"></span></span>
+          <div class="feature-card__name">AUTHENTICATION</div>
+          <div class="feature-card__desc">
+            Set <code style="color: var(--neon-yellow);">PIXDOCK_TOKEN</code> and all endpoints
+            (REST + WebSocket) require bearer auth. Don't set it? PixDock works in open mode with
+            a startup warning so you know you're living dangerously.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--green"></span></span>
+          <div class="feature-card__name">PIXEL-ART UI</div>
+          <div class="feature-card__desc">
+            CRT scanlines across the entire screen. Press Start 2P font for that authentic 8-bit
+            feeling. LED status indicators that actually glow. HP-bar gauges for CPU and memory.
+            It's the dashboard that would have made the '90s proud.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--cyan"></span></span>
+          <div class="feature-card__name">CONTAINER LOGS</div>
+          <div class="feature-card__desc">
+            Built-in log viewer with search, filter, and auto-refresh. The logs scroll in a
+            pixel-perfect terminal window with configurable tail depth and timestamp display.
+            grep your logs without leaving the browser.
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-card__icon"><span class="led led--yellow"></span></span>
+          <div class="feature-card__name">TINY FOOTPRINT</div>
+          <div class="feature-card__desc">
+            Single Rust binary. Alpine-based Docker image. ~128MB memory limit. All assets
+            self-hosted — no CDN, no external fonts, no tracking pixels, no phone home.
+            Perfect for air-gapped networks and paranoid sysadmins.
+          </div>
+        </div>
+
+      </div>
+
+      <div class="text-center mt-4">
+        <a href={`${base}features/`} class="pixel-font" style="font-size: 9px;">
+          ▸ SEE ALL FEATURES IN DETAIL ◂
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rainbow-hr rainbow-hr--thin" style="margin: 0 auto; max-width: 960px;">
+
+  <!-- ═══ HOW IT WORKS ═══ -->
+  <section style="padding: 50px 0;">
+    <div class="container">
+      <h2 class="section-title section-title--pink">
+        <span class="dim">// </span>HOW IT WORKS
+      </h2>
+
+      <div class="steps-grid">
+
+        <div class="step-card">
+          <div class="step-card__title">INSTALL</div>
+          <div class="step-card__desc">
+            Run the one-liner. It pulls the pre-built image from <code style="color: var(--neon-cyan);">ghcr.io/stormixus/pixdock</code>,
+            creates a compose file in <code style="color: var(--neon-cyan);">~/.pixdock/</code>, and starts the container.
+            The whole thing takes about 15 seconds on a decent internet connection.
+          </div>
+          <div class="step-card__code">curl -fsSL ...install.sh | sh</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-card__title">CONFIGURE</div>
+          <div class="step-card__desc">
+            Optionally set a custom port and auth token. But honestly, the defaults are fine.
+            Port 8420 was chosen because it looks like "B42O" if you squint hard enough and
+            nobody else uses it. Science.
+          </div>
+          <div class="step-card__code">--port 9000 --token my-secret</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-card__title">MONITOR</div>
+          <div class="step-card__desc">
+            Open your browser to <code style="color: var(--neon-cyan);">localhost:8420</code> and watch your containers
+            come alive in pixel art. The CRT scanlines will activate. The LED indicators will
+            start blinking. You'll feel like you're in a '90s hacker movie. Enjoy.
+          </div>
+          <div class="step-card__code">http://localhost:8420</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <hr class="rainbow-hr rainbow-hr--thin" style="margin: 0 auto; max-width: 960px;">
+
+  <!-- ═══ ARCHITECTURE PREVIEW ═══ -->
+  <section style="padding: 50px 0;">
+    <div class="container">
+      <h2 class="section-title section-title--yellow">
+        <span class="dim">// </span>ARCHITECTURE
+      </h2>
+
+      <CrtMonitor>
+        <div class="arch-diagram">
+<span class="hl-green">[Browser]</span> ──WebSocket──▸ <span class="hl-cyan">[Rust/Axum :8420]</span> ──Unix Socket──▸ <span class="hl-pink">[Docker Engine]</span>
+           ◂─broadcast──   <span class="hl-yellow">(Tokio async)</span>     <span class="hl-yellow">(/v1.43/ API)</span>
+
+<span class="hl-purple">Frontend:</span> Svelte 5 + TypeScript + Vite 6
+<span class="hl-purple">Backend:</span>  Rust + Axum 0.8 + Tokio + Hyper
+<span class="hl-purple">Deploy:</span>   Multi-stage Dockerfile (Alpine)
+        </div>
+      </CrtMonitor>
+
+      <div class="text-center mt-3">
+        <a href={`${base}architecture/`} class="pixel-font" style="font-size: 9px;">
+          ▸ FULL ARCHITECTURE DETAILS ◂
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rainbow-hr rainbow-hr--thin" style="margin: 0 auto; max-width: 960px;">
+
+  <!-- ═══ BOTTOM RETRO DECORATIONS ═══ -->
+  <section style="padding: 40px 0;">
+    <div class="container">
+
+      <MidiPlayer />
+
+      <div class="mt-4">
+        <HitCounter />
+      </div>
+
+      <div class="mt-4">
+        <WebRing />
+      </div>
+
+    </div>
+  </section>
+
+</RetroLayout>
+
+<script>
+  const btn = document.getElementById('copy-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const cmd = 'curl -fsSL https://raw.githubusercontent.com/stormixus/pixdock/main/install.sh | sh';
+      navigator.clipboard.writeText(cmd).then(() => {
+        btn.textContent = 'COPIED!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'COPY';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  }
+</script>

@@ -1,0 +1,12 @@
+---
+interface Props {
+  text?: string;
+}
+const { text = '🚧 THIS SECTION IS UNDER CONSTRUCTION 🚧' } = Astro.props;
+---
+
+<div class="under-construction">
+  <div class="under-construction__inner">
+    <span class="under-construction__text">{text}</span>
+  </div>
+</div>

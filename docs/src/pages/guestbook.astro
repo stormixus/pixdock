@@ -1,0 +1,144 @@
+---
+import RetroLayout from '../layouts/RetroLayout.astro'
+import HitCounter from '../components/HitCounter.astro'
+import UnderConstruction from '../components/UnderConstruction.astro'
+---
+
+<RetroLayout title="PixDock — Guestbook" activePage="guestbook" description="Sign our guestbook! Leave a message for the PixDock community.">
+
+  <section style="padding: 50px 0;">
+    <div class="container">
+
+      <h1 class="section-title section-title--purple" style="font-size: 20px;">
+        <span class="dim">// </span>GUESTBOOK 📝
+      </h1>
+
+      <p class="text-center mb-4" style="color: var(--text-dim); max-width: 600px; margin-left: auto; margin-right: auto;">
+        Welcome to the PixDock Guestbook! Please sign below and let us know what you think.
+        Don't forget to link your homepage!
+      </p>
+
+      <p class="text-center mb-5" style="font-family: var(--font-pixel); font-size: 8px; color: var(--neon-yellow);">
+        ★ No spam please ★ Be nice to each other ★ ASCII art encouraged ★
+      </p>
+
+      <hr class="rainbow-hr">
+
+      <!-- GUESTBOOK ENTRIES -->
+      <div class="guestbook">
+
+        <div class="guestbook__entry">
+          <div class="guestbook__meta">
+            <span class="guestbook__name">🐋 DockerWhale42</span>
+            <span class="guestbook__date">Feb 28, 2026 · 11:42 PM</span>
+          </div>
+          <div class="guestbook__message">
+            This is the coolest Docker dashboard I've ever seen!! The CRT effect is *chef's kiss*.
+            I showed it to my team and now everyone wants to use it. Please never remove the
+            scanlines. NEVER. 🖥️✨
+          </div>
+        </div>
+
+        <div class="guestbook__entry">
+          <div class="guestbook__meta">
+            <span class="guestbook__name">🦀 RustaceanDev</span>
+            <span class="guestbook__date">Feb 27, 2026 · 3:15 PM</span>
+          </div>
+          <div class="guestbook__message">
+            Finally, a Docker dashboard written in Rust that doesn't try to be a Kubernetes alternative.
+            Just simple, clean container monitoring with the best UI I've seen in years. The Tokio
+            broadcast pattern is elegant. Bookmarked the repo!
+          </div>
+        </div>
+
+        <div class="guestbook__entry">
+          <div class="guestbook__meta">
+            <span class="guestbook__name">💾 RetroSysAdmin</span>
+            <span class="guestbook__date">Feb 25, 2026 · 9:00 AM</span>
+          </div>
+          <div class="guestbook__message">
+            I feel like I'm back in my college dorm room monitoring my first Linux server.
+            Except now I have 47 containers instead of one Apache instance with 3MB of RAM.
+            Times change, aesthetics don't. 10/10 would pixel again.
+          </div>
+        </div>
+
+        <div class="guestbook__entry">
+          <div class="guestbook__meta">
+            <span class="guestbook__name">🌸 SvelteEnjoyer</span>
+            <span class="guestbook__date">Feb 22, 2026 · 7:33 PM</span>
+          </div>
+          <div class="guestbook__message">
+            The Svelte 5 frontend is so clean. Runes make the reactive state management a breeze.
+            Love how lightweight the whole thing is. Gonna fork this and make a K8s version.
+            (jk... unless? 👀)
+          </div>
+        </div>
+
+        <div class="guestbook__entry">
+          <div class="guestbook__meta">
+            <span class="guestbook__name">🔒 SecurityMike</span>
+            <span class="guestbook__date">Feb 20, 2026 · 1:11 PM</span>
+          </div>
+          <div class="guestbook__message">
+            Reviewed the auth implementation. Clean bearer token validation, good input sanitization
+            on path params, no info leakage in error responses. Solid work. Only suggestion:
+            add rate limiting on the action endpoints. Other than that, approved. 🛡️
+          </div>
+        </div>
+
+        <div class="guestbook__entry">
+          <div class="guestbook__meta">
+            <span class="guestbook__name">🎮 PixelArtFan</span>
+            <span class="guestbook__date">Feb 18, 2026 · 5:55 PM</span>
+          </div>
+          <div class="guestbook__message">
+            I came for the Docker monitoring, I stayed for the HP bars. Seriously though,
+            the Press Start 2P font choice is excellent. And the LED indicators with glow
+            shadows? *Immaculate vibes.* This is what web design was always meant to be.
+          </div>
+        </div>
+
+        <div class="guestbook__entry">
+          <div class="guestbook__meta">
+            <span class="guestbook__name">☁️ CloudNinja</span>
+            <span class="guestbook__date">Feb 15, 2026 · 10:22 AM</span>
+          </div>
+          <div class="guestbook__message">
+            Running this on my air-gapped production cluster. The fact that it needs ZERO
+            external network calls made our security team actually smile for once. That's
+            never happened before. Thank you PixDock. Thank you.
+          </div>
+        </div>
+
+        <hr class="rainbow-hr rainbow-hr--thin">
+
+        <!-- FAKE SIGN FORM -->
+        <div class="guestbook__form">
+          <div class="guestbook__form-title">✍ SIGN THE GUESTBOOK</div>
+          <input type="text" class="guestbook__input" placeholder="Your Name / Handle" disabled>
+          <input type="text" class="guestbook__input" placeholder="Your Homepage URL (http://...)" disabled>
+          <textarea class="guestbook__textarea" placeholder="Your message..." disabled></textarea>
+          <button class="guestbook__submit" disabled style="opacity: 0.5; cursor: not-allowed;">
+            SUBMIT ENTRY
+          </button>
+          <p style="font-family: var(--font-pixel); font-size: 7px; color: var(--text-dim); margin-top: 10px;">
+            ℹ This is a static site — guestbook entries are curated by the webmaster.
+            Want to be featured? Open an issue on GitHub!
+          </p>
+        </div>
+
+      </div>
+
+      <div class="mt-5">
+        <HitCounter />
+      </div>
+
+      <div class="mt-4">
+        <UnderConstruction text="🚧 GUESTBOOK 2.0 WITH CGI-BIN COMING EVENTUALLY 🚧" />
+      </div>
+
+    </div>
+  </section>
+
+</RetroLayout>

@@ -1,0 +1,278 @@
+---
+import RetroLayout from '../layouts/RetroLayout.astro'
+import CrtMonitor from '../components/CrtMonitor.astro'
+import BlinkText from '../components/BlinkText.astro'
+---
+
+<RetroLayout title="PixDock — Install Guide" activePage="install" description="Step-by-step installation guide for PixDock. One command to pixel paradise.">
+
+  <section style="padding: 50px 0;">
+    <div class="container">
+
+      <h1 class="section-title section-title--green" style="font-size: 20px;">
+        <span class="dim">// </span>INSTALLATION GUIDE
+      </h1>
+
+      <p class="text-center mb-5" style="color: var(--text-dim); max-width: 650px; margin-left: auto; margin-right: auto;">
+        Three ways to get PixDock running. Pick the one that matches your comfort level with terminals
+        and existential dread about container orchestration.
+      </p>
+
+      <hr class="rainbow-hr">
+
+      <!-- ═══ SYSTEM REQUIREMENTS ═══ -->
+      <div class="bevel-panel mb-4">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-yellow); margin-bottom: 16px;">
+          ⚙ SYSTEM REQUIREMENTS
+        </h2>
+        <table class="retro-table">
+          <thead>
+            <tr>
+              <th>Requirement</th>
+              <th>Minimum</th>
+              <th>Recommended</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Docker Engine</td>
+              <td>20.10+</td>
+              <td>24.0+</td>
+            </tr>
+            <tr>
+              <td>Docker API</td>
+              <td>v1.41</td>
+              <td>v1.43</td>
+            </tr>
+            <tr>
+              <td>OS</td>
+              <td>Linux (amd64/arm64)</td>
+              <td>Linux (any arch with Docker)</td>
+            </tr>
+            <tr>
+              <td>Memory</td>
+              <td>64MB free</td>
+              <td>128MB allocated</td>
+            </tr>
+            <tr>
+              <td>Disk</td>
+              <td>~50MB</td>
+              <td>~100MB (with image layers)</td>
+            </tr>
+            <tr>
+              <td>Network</td>
+              <td>Not required (air-gap OK)</td>
+              <td>Internet for initial pull</td>
+            </tr>
+            <tr>
+              <td>Browser</td>
+              <td>Chrome/Firefox/Safari (modern)</td>
+              <td>Any browser from this millennium</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ═══ METHOD 1: ONE-LINER ═══ -->
+      <div class="neon-box mb-4">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-green); margin-bottom: 16px;">
+          METHOD 01: ONE-LINE INSTALL <BlinkText text="★ RECOMMENDED" />
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 16px;">
+          The fastest way to get PixDock running. This script downloads the latest pre-built image from
+          GitHub Container Registry, creates a Docker Compose file in <code style="color: var(--neon-cyan);">~/.pixdock/</code>,
+          and starts the container. Done in about 15 seconds.
+        </p>
+
+        <div class="code-block" data-lang="bash" style="margin-bottom: 16px;">
+<span class="comment"># Default install — port 8420, no auth</span>
+<span class="keyword">curl</span> <span class="flag">-fsSL</span> https://raw.githubusercontent.com/stormixus/pixdock/main/install.sh <span class="keyword">|</span> sh
+        </div>
+
+        <h3 style="font-family: var(--font-pixel); font-size: 9px; color: var(--neon-cyan); margin: 20px 0 12px;">
+          ▸ OPTIONS
+        </h3>
+
+        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+<span class="comment"># Custom port</span>
+<span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--port</span> <span class="string">9000</span>
+        </div>
+
+        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+<span class="comment"># With bearer token authentication</span>
+<span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--token</span> <span class="string">my-super-secret-token</span>
+        </div>
+
+        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+<span class="comment"># Non-interactive (skip confirmation, useful for CI/automation)</span>
+<span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--yes</span>
+        </div>
+
+        <div class="code-block" data-lang="bash">
+<span class="comment"># Uninstall — removes container, image, and ~/.pixdock/</span>
+<span class="keyword">curl</span> <span class="flag">-fsSL</span> ...install.sh <span class="keyword">|</span> sh <span class="flag">-s</span> <span class="flag">--</span> <span class="flag">--uninstall</span>
+        </div>
+
+        <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px; font-size: 12px;">
+          <strong>What the install script does:</strong><br>
+          1. Checks that Docker is installed and running<br>
+          2. Pulls <code style="color: var(--neon-cyan);">ghcr.io/stormixus/pixdock:latest</code><br>
+          3. Creates <code style="color: var(--neon-cyan);">~/.pixdock/docker-compose.yml</code><br>
+          4. Mounts <code style="color: var(--neon-cyan);">/var/run/docker.sock</code> into the container<br>
+          5. Starts the service via <code style="color: var(--neon-cyan);">docker compose up -d</code><br>
+          6. Prints the dashboard URL
+        </p>
+      </div>
+
+      <!-- ═══ METHOD 2: DOCKER COMPOSE ═══ -->
+      <div class="neon-box neon-box--cyan mb-4">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-cyan); margin-bottom: 16px;">
+          METHOD 02: DOCKER COMPOSE (BUILD FROM SOURCE)
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 16px;">
+          Clone the repo and build from source. Good for development or if you want to customize
+          the frontend before deploying.
+        </p>
+
+        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+<span class="comment"># Clone and build</span>
+<span class="keyword">git</span> clone https://github.com/stormixus/pixdock.git
+<span class="keyword">cd</span> pixdock
+<span class="keyword">docker</span> compose up <span class="flag">--build</span>
+        </div>
+
+        <div class="code-block" data-lang="bash">
+<span class="comment"># With authentication enabled</span>
+<span class="keyword">PIXDOCK_TOKEN</span>=<span class="string">my-secret-token</span> <span class="keyword">docker</span> compose up <span class="flag">--build</span>
+        </div>
+
+        <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px;">
+          The multi-stage Dockerfile handles everything: builds the Svelte frontend with Vite,
+          compiles the Rust backend with Cargo, and packages it all into a tiny Alpine image.
+        </p>
+      </div>
+
+      <!-- ═══ METHOD 3: SWARM ═══ -->
+      <div class="neon-box neon-box--pink mb-4">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-pink); margin-bottom: 16px;">
+          METHOD 03: DOCKER SWARM STACK
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 16px;">
+          Deploy PixDock as a Swarm service. This is the recommended method if you're already running
+          a Swarm cluster — PixDock will automatically detect Swarm mode and show the full cluster dashboard.
+        </p>
+
+        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+<span class="comment"># Build the image</span>
+<span class="keyword">docker</span> build <span class="flag">-t</span> pixdock:latest <span class="string">.</span>
+        </div>
+
+        <div class="code-block" data-lang="bash">
+<span class="comment"># Deploy as a Swarm stack</span>
+<span class="keyword">docker</span> stack deploy <span class="flag">-c</span> stack.yml pixdock
+        </div>
+
+        <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px;">
+          The <code style="color: var(--neon-cyan);">stack.yml</code> includes placement constraints
+          to run on manager nodes only (needed for Swarm API access), a 128MB memory limit, and
+          automatic restart policy.
+        </p>
+      </div>
+
+      <!-- ═══ METHOD 4: LOCAL DEV ═══ -->
+      <div class="bevel-panel mb-4">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-purple); margin-bottom: 16px;">
+          METHOD 04: LOCAL DEVELOPMENT
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 16px;">
+          Run the backend and frontend separately with hot reload. Ideal for contributing or
+          hacking on the UI.
+        </p>
+
+        <div class="code-block" data-lang="bash" style="margin-bottom: 10px;">
+<span class="comment"># Terminal 1 — Backend (Rust)</span>
+<span class="keyword">cd</span> backend
+<span class="keyword">cargo</span> run
+        </div>
+
+        <div class="code-block" data-lang="bash">
+<span class="comment"># Terminal 2 — Frontend (Svelte + Vite, hot reload)</span>
+<span class="keyword">cd</span> frontend
+<span class="keyword">npm</span> install
+<span class="keyword">npm</span> run dev
+        </div>
+
+        <p style="color: var(--text-dim); line-height: 1.8; margin-top: 16px;">
+          The Vite dev server proxies API calls to the Rust backend automatically. Changes to
+          <code style="color: var(--neon-cyan);">.svelte</code> files hot-reload instantly.
+          Changes to <code style="color: var(--neon-cyan);">.rs</code> files require a
+          <code style="color: var(--neon-green);">cargo run</code> restart (or use
+          <code style="color: var(--neon-green);">cargo watch</code>).
+        </p>
+      </div>
+
+      <hr class="rainbow-hr">
+
+      <!-- ═══ TROUBLESHOOTING ═══ -->
+      <div class="bevel-panel mb-4">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-red); margin-bottom: 16px;">
+          🔧 TROUBLESHOOTING / FAQ
+        </h2>
+
+        <div class="bevel-inset mb-3">
+          <p style="font-family: var(--font-pixel); font-size: 8px; color: var(--neon-yellow); margin-bottom: 8px;">
+            Q: "I see 'permission denied' when accessing the Docker socket"
+          </p>
+          <p style="color: var(--text-dim); line-height: 1.6;">
+            A: The container needs access to <code style="color: var(--neon-cyan);">/var/run/docker.sock</code>.
+            Make sure your user is in the <code style="color: var(--neon-green);">docker</code> group,
+            or run with appropriate permissions.
+          </p>
+        </div>
+
+        <div class="bevel-inset mb-3">
+          <p style="font-family: var(--font-pixel); font-size: 8px; color: var(--neon-yellow); margin-bottom: 8px;">
+            Q: "The dashboard says 'Connecting...' but never loads"
+          </p>
+          <p style="color: var(--text-dim); line-height: 1.6;">
+            A: Check that port 8420 (or your custom port) is not being blocked by a firewall. Also
+            verify the container is actually running with <code style="color: var(--neon-green);">docker ps</code>.
+          </p>
+        </div>
+
+        <div class="bevel-inset mb-3">
+          <p style="font-family: var(--font-pixel); font-size: 8px; color: var(--neon-yellow); margin-bottom: 8px;">
+            Q: "Can I run PixDock on macOS / Windows?"
+          </p>
+          <p style="color: var(--text-dim); line-height: 1.6;">
+            A: Yes! As long as Docker Desktop is running, the Unix socket is available at the standard
+            path and PixDock will work. On Windows with WSL2, it also works through the Docker Desktop
+            integration.
+          </p>
+        </div>
+
+        <div class="bevel-inset mb-3">
+          <p style="font-family: var(--font-pixel); font-size: 8px; color: var(--neon-yellow); margin-bottom: 8px;">
+            Q: "Why port 8420?"
+          </p>
+          <p style="color: var(--text-dim); line-height: 1.6;">
+            A: Because it looks cool, nobody else uses it, and port 80 was already taken. Science.
+          </p>
+        </div>
+
+        <div class="bevel-inset">
+          <p style="font-family: var(--font-pixel); font-size: 8px; color: var(--neon-yellow); margin-bottom: 8px;">
+            Q: "Is this production-ready?"
+          </p>
+          <p style="color: var(--text-dim); line-height: 1.6;">
+            A: PixDock is designed for monitoring dashboards — not mission-critical infrastructure.
+            That said, the Rust backend is rock-solid, the memory footprint is tiny, and the auth
+            system is sound. People are running it in production. You do you.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</RetroLayout>

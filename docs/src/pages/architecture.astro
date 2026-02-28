@@ -1,0 +1,235 @@
+---
+import RetroLayout from '../layouts/RetroLayout.astro'
+import CrtMonitor from '../components/CrtMonitor.astro'
+---
+
+<RetroLayout title="PixDock — Architecture" activePage="architecture" description="How PixDock works under the hood — from browser to Docker socket.">
+
+  <section style="padding: 50px 0;">
+    <div class="container">
+
+      <h1 class="section-title section-title--yellow" style="font-size: 20px;">
+        <span class="dim">// </span>ARCHITECTURE
+      </h1>
+
+      <p class="text-center mb-5" style="color: var(--text-dim); max-width: 650px; margin-left: auto; margin-right: auto;">
+        A deep dive into how PixDock is built — from the Svelte frontend all the way down to the Docker
+        Unix socket. Presented in glorious ASCII diagrams because this is a 90s retro site and we
+        don't do Figma here.
+      </p>
+
+      <hr class="rainbow-hr">
+
+      <!-- SYSTEM OVERVIEW -->
+      <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-green); text-align: center; margin-bottom: 24px;">
+        SYSTEM OVERVIEW
+      </h2>
+
+      <CrtMonitor>
+        <div class="arch-diagram">
+<span class="hl-green">┌──────────────────────────────────────────────────────────────┐</span>
+<span class="hl-green">│                        BROWSER                               │</span>
+<span class="hl-green">│  ┌─────────────────────────────────────────────────────────┐ │</span>
+<span class="hl-green">│  │  Svelte 5 + TypeScript + Vite 6                        │ │</span>
+<span class="hl-green">│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐  │ │</span>
+<span class="hl-green">│  │  │Dashboard │ │NodeRack  │ │Services  │ │LogViewer  │  │ │</span>
+<span class="hl-green">│  │  └──────────┘ └──────────┘ └──────────┘ └───────────┘  │ │</span>
+<span class="hl-green">│  └───────────────────────┬─────────────────────────────────┘ │</span>
+<span class="hl-green">│                          │ WebSocket (JSON)                  │</span>
+<span class="hl-green">└──────────────────────────┼───────────────────────────────────┘</span>
+                           │
+                           ▼
+<span class="hl-cyan">┌──────────────────────────────────────────────────────────────┐</span>
+<span class="hl-cyan">│                     RUST / AXUM  :8420                       │</span>
+<span class="hl-cyan">│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐   │</span>
+<span class="hl-cyan">│  │ WS       │ │ REST API │ │ Auth     │ │ Static Files  │   │</span>
+<span class="hl-cyan">│  │ Handler  │ │ Routes   │ │ Guard    │ │ (embedded)    │   │</span>
+<span class="hl-cyan">│  └─────┬────┘ └─────┬────┘ └──────────┘ └───────────────┘   │</span>
+<span class="hl-cyan">│        │            │                                        │</span>
+<span class="hl-cyan">│        ▼            ▼                                        │</span>
+<span class="hl-cyan">│  ┌─────────────────────────────────┐                         │</span>
+<span class="hl-cyan">│  │  Tokio Broadcast Channel        │                         │</span>
+<span class="hl-cyan">│  │  (Single poller → N clients)    │                         │</span>
+<span class="hl-cyan">│  └────────────────┬────────────────┘                         │</span>
+<span class="hl-cyan">│                   │ HTTP over Unix Socket                    │</span>
+<span class="hl-cyan">└───────────────────┼──────────────────────────────────────────┘</span>
+                    │
+                    ▼
+<span class="hl-pink">┌──────────────────────────────────────────────────────────────┐</span>
+<span class="hl-pink">│                    DOCKER ENGINE                             │</span>
+<span class="hl-pink">│  /var/run/docker.sock  ·  API v1.43                          │</span>
+<span class="hl-pink">│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐   │</span>
+<span class="hl-pink">│  │Containers│ │ Services │ │  Nodes   │ │    Tasks      │   │</span>
+<span class="hl-pink">│  └──────────┘ └──────────┘ └──────────┘ └───────────────┘   │</span>
+<span class="hl-pink">└──────────────────────────────────────────────────────────────┘</span>
+        </div>
+      </CrtMonitor>
+
+      <hr class="rainbow-hr">
+
+      <!-- TECH STACK -->
+      <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-cyan); text-align: center; margin: 40px 0 20px;">
+        TECH STACK
+      </h2>
+
+      <div style="overflow-x: auto;">
+        <table class="retro-table">
+          <thead>
+            <tr><th>Layer</th><th>Technology</th><th>Version</th><th>Why</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="neon-green">Backend Runtime</span></td>
+              <td>Rust + Tokio</td>
+              <td>1.75+</td>
+              <td>Memory safety, async I/O, zero-cost abstractions</td>
+            </tr>
+            <tr>
+              <td><span class="neon-cyan">HTTP Framework</span></td>
+              <td>Axum</td>
+              <td>0.8</td>
+              <td>Tower-based, ergonomic routing, built-in WebSocket</td>
+            </tr>
+            <tr>
+              <td><span class="neon-pink">HTTP Client</span></td>
+              <td>Hyper</td>
+              <td>1.x</td>
+              <td>Unix socket support for Docker API</td>
+            </tr>
+            <tr>
+              <td><span class="neon-yellow">Frontend Framework</span></td>
+              <td>Svelte 5</td>
+              <td>5.x</td>
+              <td>Reactive, compiled, tiny bundle size</td>
+            </tr>
+            <tr>
+              <td><span class="neon-purple">Build Tool</span></td>
+              <td>Vite</td>
+              <td>6.x</td>
+              <td>Fast, ESM-native, great Svelte integration</td>
+            </tr>
+            <tr>
+              <td><span class="neon-green">Docker API</span></td>
+              <td>Engine API</td>
+              <td>v1.43</td>
+              <td>Pinned version to prevent schema drift</td>
+            </tr>
+            <tr>
+              <td><span class="neon-cyan">Container Base</span></td>
+              <td>Alpine Linux</td>
+              <td>3.19</td>
+              <td>~5MB base image, minimal attack surface</td>
+            </tr>
+            <tr>
+              <td><span class="neon-yellow">CI/CD</span></td>
+              <td>GitHub Actions</td>
+              <td>—</td>
+              <td>clippy, fmt, test, build, release</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <hr class="rainbow-hr">
+
+      <!-- DATA FLOW -->
+      <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-pink); text-align: center; margin: 40px 0 20px;">
+        DATA FLOW
+      </h2>
+
+      <div class="bevel-panel mb-4">
+        <h3 style="font-family: var(--font-pixel); font-size: 10px; color: var(--neon-green); margin-bottom: 12px;">
+          1. POLLING LOOP (Background Task)
+        </h3>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          A single Tokio task runs in the background. Every 3 seconds, it queries the Docker Engine
+          through the Unix socket. It fetches containers, services (if Swarm), nodes (if Swarm), and
+          system info. The results are serialized into a <code style="color: var(--neon-cyan);">DashboardState</code>
+          struct and sent to the Tokio broadcast channel.
+        </p>
+        <div class="code-block" data-lang="rust">
+<span class="keyword">loop</span> {'{'} 
+    <span class="keyword">let</span> state = poll_docker(&amp;client).<span class="keyword">await</span>;
+    <span class="keyword">let</span> json = serde_json::to_string(&amp;state)?;
+    tx.send(json)?;  <span class="comment">// broadcast to all WS clients</span>
+    tokio::time::sleep(Duration::from_secs(3)).<span class="keyword">await</span>;
+{'}'}</div>
+      </div>
+
+      <div class="bevel-panel mb-4">
+        <h3 style="font-family: var(--font-pixel); font-size: 10px; color: var(--neon-cyan); margin-bottom: 12px;">
+          2. WEBSOCKET HANDLER
+        </h3>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          Each WebSocket client subscribes to the same broadcast channel. When the poller sends a new
+          state, all clients receive it simultaneously. The handler also validates the auth token on
+          upgrade and cleanly handles disconnections.
+        </p>
+      </div>
+
+      <div class="bevel-panel mb-4">
+        <h3 style="font-family: var(--font-pixel); font-size: 10px; color: var(--neon-yellow); margin-bottom: 12px;">
+          3. REST API HANDLERS
+        </h3>
+        <p style="color: var(--text); line-height: 1.8;">
+          Actions (start/stop/restart/scale) go through REST endpoints. Each handler validates the
+          request, calls the Docker Engine API, and returns the result. All parameters are sanitized
+          against a strict regex. Errors are returned as structured JSON — never raw error strings.
+        </p>
+      </div>
+
+      <hr class="rainbow-hr">
+
+      <!-- PROJECT STRUCTURE -->
+      <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-purple); text-align: center; margin: 40px 0 20px;">
+        PROJECT STRUCTURE
+      </h2>
+
+      <div class="code-block" data-lang="tree" style="font-family: var(--font-retro); font-size: 16px; line-height: 1.5; color: var(--text-dim);">
+<span class="neon-green">pixdock/</span>
+├── <span class="neon-cyan">backend/</span>
+│   └── src/
+│       ├── main.rs              <span class="comment"># Entry, routing, socket check</span>
+│       ├── auth.rs              <span class="comment"># Bearer token middleware</span>
+│       ├── state.rs             <span class="comment"># AppState (Docker + Broadcaster)</span>
+│       ├── <span class="neon-pink">docker/</span>
+│       │   ├── client.rs        <span class="comment"># Unix socket HTTP client</span>
+│       │   ├── containers.rs    <span class="comment"># Container ops + log parsing</span>
+│       │   ├── nodes.rs         <span class="comment"># Swarm node ops</span>
+│       │   └── services.rs      <span class="comment"># Service + task ops, scaling</span>
+│       ├── <span class="neon-pink">ws/</span>
+│       │   └── handler.rs       <span class="comment"># Shared broadcast WebSocket</span>
+│       └── <span class="neon-pink">api/</span>
+│           └── routes.rs        <span class="comment"># REST with input validation</span>
+├── <span class="neon-yellow">frontend/</span>
+│   └── src/
+│       ├── app.css              <span class="comment"># Pixel theme + CRT effects</span>
+│       └── lib/
+│           ├── <span class="neon-pink">components/</span>      <span class="comment"># Svelte 5 components</span>
+│           ├── stores/swarm.ts  <span class="comment"># Reactive state store</span>
+│           └── utils/ws.ts      <span class="comment"># WebSocket connection logic</span>
+├── Dockerfile                   <span class="comment"># Multi-stage build</span>
+├── docker-compose.yml           <span class="comment"># Standalone deployment</span>
+└── stack.yml                    <span class="comment"># Swarm deployment</span></div>
+
+      <!-- SECURITY -->
+      <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-red); text-align: center; margin: 40px 0 20px;">
+        🔒 SECURITY MEASURES
+      </h2>
+
+      <div class="bevel-panel">
+        <ul style="color: var(--text); line-height: 2.4; padding-left: 24px;">
+          <li>Path parameters validated: <code style="color: var(--neon-green);">[a-zA-Z0-9_.-]&#123;1,128&#125;</code></li>
+          <li>Docker API version pinned to <code style="color: var(--neon-cyan);">v1.43</code> — no schema drift</li>
+          <li>Optional bearer token auth on REST + WebSocket</li>
+          <li>Scale requests capped at <code style="color: var(--neon-yellow);">1000</code> replicas</li>
+          <li>Structured JSON errors — no stack traces, no info leakage</li>
+          <li>No external network calls — all assets embedded in binary</li>
+          <li><code style="color: var(--neon-cyan);">/api/health</code> always public for monitoring</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</RetroLayout>

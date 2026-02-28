@@ -1,0 +1,16 @@
+---
+// Decorative hit counter — shows a random-ish number
+const count = '004827';
+const digits = count.split('');
+---
+
+<div class="hit-counter">
+  <div class="hit-counter__label">
+    You are visitor #
+  </div>
+  <div class="hit-counter__digits">
+    {digits.map(d => (
+      <span class="hit-counter__digit">{d}</span>
+    ))}
+  </div>
+</div>

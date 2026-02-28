@@ -1,0 +1,10 @@
+---
+interface Props {
+  text?: string;
+}
+const { text = 'CLICK HERE' } = Astro.props;
+---
+
+<span class="animate-blink" style="font-family: var(--font-pixel); font-size: 10px; color: var(--neon-yellow);">
+  {text}
+</span>

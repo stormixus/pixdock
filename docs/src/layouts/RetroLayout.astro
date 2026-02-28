@@ -1,0 +1,78 @@
+---
+import '../styles/retro.css'
+
+interface Props {
+  title: string;
+  description?: string;
+  activePage?: string;
+}
+
+const { title, description = 'Pixel-art Docker dashboard with retro CRT aesthetics.', activePage = '' } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:type" content="website">
+  <link rel="icon" href={`${base}favicon.ico`} type="image/x-icon">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href={`${base}`} class="nav__brand">[PX] PIXDOCK</a>
+      <div class="nav__links">
+        <a href={`${base}`} class={`nav__link ${activePage === 'home' ? 'nav__link--active' : ''}`}>HOME</a>
+        <a href={`${base}features/`} class={`nav__link ${activePage === 'features' ? 'nav__link--active' : ''}`}>FEATURES</a>
+        <a href={`${base}install/`} class={`nav__link ${activePage === 'install' ? 'nav__link--active' : ''}`}>INSTALL</a>
+        <a href={`${base}api/`} class={`nav__link ${activePage === 'api' ? 'nav__link--active' : ''}`}>API</a>
+        <a href={`${base}architecture/`} class={`nav__link ${activePage === 'architecture' ? 'nav__link--active' : ''}`}>ARCH</a>
+        <a href={`${base}guestbook/`} class={`nav__link ${activePage === 'guestbook' ? 'nav__link--active' : ''}`}>GUESTBOOK</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Marquee Banner -->
+  <div class="marquee-banner">
+    <span class="marquee-banner__text">
+      ★★★ Welcome to PixDock — The Pixel-Art Docker Dashboard! ★★★ &nbsp;&nbsp;&nbsp; 🚀 v0.1.0 RELEASED! &nbsp;&nbsp;&nbsp; ★ Monitor your containers in GLORIOUS CRT mode ★ &nbsp;&nbsp;&nbsp; 📟 Zero config, one-line install &nbsp;&nbsp;&nbsp; ★ Swarm + Standalone supported ★ &nbsp;&nbsp;&nbsp; 🎮 HP bars, LED indicators, scanlines &nbsp;&nbsp;&nbsp; ★★★ Sign our Guestbook! ★★★
+    </span>
+  </div>
+
+  <!-- Main Content -->
+  <main>
+    <slot />
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <hr class="rainbow-hr rainbow-hr--thin">
+      <div class="footer__links">
+        <a href="https://github.com/stormixus/pixdock">⌂ GitHub</a>
+        <a href="https://github.com/stormixus/pixdock/issues">⚠ Issues</a>
+        <a href="https://github.com/stormixus/pixdock#api">📖 API Docs</a>
+        <a href={`${base}guestbook/`}>📝 Guestbook</a>
+      </div>
+      <div class="footer__copy">
+        MIT License · Made with <span class="footer__heart">&lt;3</span> and pixels
+      </div>
+      <div class="footer__best-viewed">
+        Best viewed in <span class="footer__netscape">Netscape Navigator 4.0</span> at 800×600 · 256 colors
+      </div>
+      <div class="footer__best-viewed" style="margin-top: 8px;">
+        © 1997-2026 PixDock Industries · All Rights Reserved · <span class="animate-rainbow">WebMaster: stormixus</span>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

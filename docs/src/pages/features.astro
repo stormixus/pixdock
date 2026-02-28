@@ -1,0 +1,277 @@
+---
+import RetroLayout from '../layouts/RetroLayout.astro'
+import BlinkText from '../components/BlinkText.astro'
+import UnderConstruction from '../components/UnderConstruction.astro'
+---
+
+<RetroLayout title="PixDock — Features" activePage="features" description="Every feature of PixDock explained in loving pixel-perfect detail.">
+
+  <section style="padding: 50px 0;">
+    <div class="container">
+
+      <h1 class="section-title section-title--cyan" style="font-size: 20px;">
+        <span class="dim">// </span>FEATURES
+      </h1>
+
+      <p class="text-center mb-5" style="color: var(--text-dim); max-width: 650px; margin-left: auto; margin-right: auto;">
+        Every single feature explained in obsessive, almost-too-much detail. Because if you're going to
+        build a Docker dashboard that looks like it escaped from 1997, you might as well document it like
+        it's 1997 too.
+      </p>
+
+      <hr class="rainbow-hr">
+
+      <!-- ═══ AUTO-DETECT ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-green); margin-bottom: 16px;">
+          <span class="led led--green"></span> &nbsp;AUTO-DETECT MODE
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          When PixDock starts up, the very first thing it does is query the Docker Engine API at
+          <code style="color: var(--neon-yellow);">/info</code>. It checks whether Docker Swarm is active
+          by looking at the <code style="color: var(--neon-yellow);">Swarm.LocalNodeState</code> field.
+          If the value is <code style="color: var(--neon-green);">"active"</code>, PixDock switches to
+          Swarm mode — showing nodes, services, tasks, and stacks. If it's anything else, PixDock falls
+          back to Standalone mode and shows individual containers.
+        </p>
+        <p style="color: var(--text-dim); line-height: 1.8; margin-bottom: 12px;">
+          This happens automatically. No environment variables. No config files. No "swarm: true" in some
+          YAML somewhere. The dashboard adapts to whatever your Docker daemon is doing right now. If you
+          join a swarm later, just restart PixDock and it'll pick up the change.
+        </p>
+        <div class="bevel-inset" style="font-family: var(--font-retro); font-size: 16px; color: var(--neon-green);">
+          Docker API → /info → Swarm.LocalNodeState → "active" ? SWARM_MODE : STANDALONE_MODE
+        </div>
+      </div>
+
+      <!-- ═══ REAL-TIME ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-cyan); margin-bottom: 16px;">
+          <span class="led led--cyan"></span> &nbsp;REAL-TIME BROADCAST
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          Unlike traditional dashboards that poll on every client connection (meaning 10 browser tabs =
+          10 separate Docker API calls), PixDock uses a <strong>shared broadcast architecture</strong>.
+          A single Tokio background task polls the Docker Engine every 3 seconds and broadcasts the state
+          to all connected WebSocket clients simultaneously.
+        </p>
+        <p style="color: var(--text-dim); line-height: 1.8; margin-bottom: 12px;">
+          This means opening 100 browser tabs costs exactly the same as opening 1. The Docker daemon
+          only ever sees one client making requests. Your server doesn't break a sweat. The WebSocket
+          uses Axum's built-in upgrade handler with Tokio's broadcast channel — it's about 50 lines of
+          Rust that handles everything.
+        </p>
+        <table class="retro-table mt-3">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Traditional</th>
+              <th>PixDock</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Docker API calls per 3s</td>
+              <td style="color: var(--neon-red);">N (one per client)</td>
+              <td style="color: var(--neon-green);">1 (always)</td>
+            </tr>
+            <tr>
+              <td>CPU at 50 clients</td>
+              <td style="color: var(--neon-red);">📈 Linear growth</td>
+              <td style="color: var(--neon-green);">📉 Flat</td>
+            </tr>
+            <tr>
+              <td>Memory at 50 clients</td>
+              <td style="color: var(--neon-red);">~50× base</td>
+              <td style="color: var(--neon-green);">~1× base + WebSocket buffers</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ═══ CONTROLS ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-yellow); margin-bottom: 16px;">
+          <span class="led led--yellow"></span> &nbsp;CONTAINER CONTROLS
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          Each container card in the dashboard has three pixel-perfect buttons: <strong>START</strong>,
+          <strong>STOP</strong>, and <strong>RESTART</strong>. They map directly to the Docker Engine
+          API endpoints. The buttons are visually styled as retro game controller buttons with satisfying
+          hover effects and LED feedback.
+        </p>
+        <p style="color: var(--text-dim); line-height: 1.8; margin-bottom: 12px;">
+          For Swarm services, there's a <strong>SCALE</strong> control that lets you adjust replica counts.
+          The input is validated server-side — no negative numbers, no non-integers, no scaling beyond
+          1000 replicas (because even we have limits). The response is immediate: the service acknowledges
+          the scale change and starts scheduling new tasks.
+        </p>
+        <p style="color: var(--text); line-height: 1.8;">
+          All actions require authentication if <code style="color: var(--neon-yellow);">PIXDOCK_TOKEN</code>
+          is set. The container/service ID in the URL is validated against a strict regex pattern:
+          <code style="color: var(--neon-green);">[a-zA-Z0-9_.-]&#123;1,128&#125;</code> — no path traversal,
+          no injection, no funny business.
+        </p>
+      </div>
+
+      <!-- ═══ SWARM ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-purple); margin-bottom: 16px;">
+          <span class="led led--purple"></span> &nbsp;SWARM SUPPORT
+          <span class="badge-new">HOT!</span>
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          The Swarm dashboard is where PixDock really shines. You get a <strong>Node Rack</strong> showing
+          every node in your cluster — their role (manager/worker), status, availability, and resource
+          usage. Nodes are rendered as physical rack units in a retro server-room aesthetic.
+        </p>
+        <p style="color: var(--text-dim); line-height: 1.8; margin-bottom: 12px;">
+          Services are grouped by <strong>Stack</strong>. Each service shows its image, replica count
+          (running/desired), ports, and update status. Click a service to see its individual
+          <strong>Tasks</strong> — which node each replica is running on, its state, error messages
+          (if any), and timestamps.
+        </p>
+        <table class="retro-table mt-3">
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Description</th>
+              <th>API Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="neon-green">Node Rack</span></td>
+              <td>Cluster node overview with roles & status</td>
+              <td><code>/nodes</code></td>
+            </tr>
+            <tr>
+              <td><span class="neon-cyan">Service List</span></td>
+              <td>Services grouped by stack label</td>
+              <td><code>/services</code></td>
+            </tr>
+            <tr>
+              <td><span class="neon-pink">Task Details</span></td>
+              <td>Per-service task states</td>
+              <td><code>/tasks?filters=...</code></td>
+            </tr>
+            <tr>
+              <td><span class="neon-yellow">Scaling</span></td>
+              <td>Adjust replica count</td>
+              <td><code>POST /services/:id/update</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ═══ AUTH ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-red); margin-bottom: 16px;">
+          <span class="led led--red"></span> &nbsp;AUTHENTICATION
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          Authentication is <strong>optional but recommended</strong>. Set the
+          <code style="color: var(--neon-yellow);">PIXDOCK_TOKEN</code> environment variable to any
+          string value, and PixDock will require that token on every API call and WebSocket connection.
+        </p>
+        <p style="color: var(--text-dim); line-height: 1.8; margin-bottom: 12px;">
+          REST endpoints expect <code style="color: var(--neon-green);">Authorization: Bearer &lt;token&gt;</code>
+          in the header. WebSocket connections pass the token as a query parameter:
+          <code style="color: var(--neon-green);">?token=&lt;token&gt;</code>. The
+          <code style="color: var(--neon-cyan);">/api/health</code> endpoint is always public — you
+          need some way to check if PixDock is alive without credentials.
+        </p>
+        <p style="color: var(--text); line-height: 1.8;">
+          If <code style="color: var(--neon-yellow);">PIXDOCK_TOKEN</code> is not set, PixDock starts
+          in open mode. It prints a <BlinkText text="⚠ WARNING" /> to the console so you know
+          your dashboard is accessible to anyone on the network.
+        </p>
+      </div>
+
+      <!-- ═══ PIXEL UI ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-green); margin-bottom: 16px;">
+          <span class="led led--green"></span> &nbsp;PIXEL-ART UI
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          The UI is built with <strong>Svelte 5</strong> and styled to look like a CRT terminal from an
+          alternate timeline where system administrators had better taste. Key visual elements include:
+        </p>
+        <ul style="color: var(--text-dim); line-height: 2.2; padding-left: 24px;">
+          <li><span class="neon-green">CRT Scanlines</span> — A CSS pseudo-element overlay simulating phosphor scan lines across the entire viewport</li>
+          <li><span class="neon-green">Press Start 2P</span> — Google's pixel font for headers, labels, and UI chrome</li>
+          <li><span class="neon-green">LED Indicators</span> — Color-coded square dots with glow shadows for container states (green=running, red=stopped, yellow=paused)</li>
+          <li><span class="neon-green">HP Bars</span> — Health/resource gauges styled as retro game HP bars with stepped fill animations</li>
+          <li><span class="neon-green">Pixel Borders</span> — 4px solid borders on all panels, no border-radius, no rounded corners</li>
+          <li><span class="neon-green">Flicker Effect</span> — Subtle opacity animation simulating CRT screen instability</li>
+        </ul>
+      </div>
+
+      <!-- ═══ LOGS ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-cyan); margin-bottom: 16px;">
+          <span class="led led--cyan"></span> &nbsp;CONTAINER LOGS
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          Click any container to open its log viewer. Logs are fetched via
+          <code style="color: var(--neon-green);">GET /api/containers/:id/logs</code> with configurable
+          <code style="color: var(--neon-yellow);">?tail=</code> depth (default: 200 lines) and optional
+          <code style="color: var(--neon-yellow);">?timestamps=true</code>.
+        </p>
+        <p style="color: var(--text-dim); line-height: 1.8;">
+          The log viewer renders in a pixel-styled terminal panel with auto-scroll. Search and filter
+          are built in — type a keyword and only matching lines are shown. It's not fancy, it's not
+          Kibana, but it gets the job done and looks exactly like a terminal from 1997 while doing it.
+        </p>
+      </div>
+
+      <!-- ═══ FOOTPRINT ═══ -->
+      <div class="bevel-panel mb-4 animate-slide-up">
+        <h2 style="font-family: var(--font-pixel); font-size: 12px; color: var(--neon-yellow); margin-bottom: 16px;">
+          <span class="led led--yellow"></span> &nbsp;TINY FOOTPRINT
+        </h2>
+        <p style="color: var(--text); line-height: 1.8; margin-bottom: 12px;">
+          PixDock is compiled to a single static Rust binary. The frontend assets (HTML, CSS, JS) are
+          embedded directly into the binary at build time using Rust's <code style="color: var(--neon-green);">include_dir!</code>
+          macro. There's literally one file to deploy.
+        </p>
+        <table class="retro-table mt-3">
+          <thead>
+            <tr>
+              <th>Spec</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Docker Image Size</td>
+              <td><span class="neon-green">~25MB</span> (Alpine + binary)</td>
+            </tr>
+            <tr>
+              <td>Memory Limit</td>
+              <td><span class="neon-green">128MB</span> (enforced in compose)</td>
+            </tr>
+            <tr>
+              <td>External Dependencies</td>
+              <td><span class="neon-green">0</span> (all self-hosted)</td>
+            </tr>
+            <tr>
+              <td>Network Calls</td>
+              <td><span class="neon-green">0</span> (no CDN, no telemetry)</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="color: var(--text-dim); line-height: 1.8; margin-top: 12px;">
+          This makes PixDock perfect for air-gapped networks, edge deployments, and environments where
+          reaching the internet is either impossible or politically inadvisable.
+        </p>
+      </div>
+
+      <hr class="rainbow-hr">
+
+      <UnderConstruction text="🚧 MORE FEATURES COMING SOON — STAY TUNED! 🚧" />
+
+    </div>
+  </section>
+
+</RetroLayout>
