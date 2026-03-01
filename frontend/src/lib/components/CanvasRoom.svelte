@@ -285,12 +285,12 @@
     const shelfH = 90; // Logical Shelf Height
     
     // Fill the top-left isometric wall (gx = 0, gy varies)
-    const shelvesPerWall = Math.floor(ROWS / 3);
+    const shelvesPerWall = Math.floor(ROWS / 2) - 1; // Reduce count slightly so they don't overflow the back corner
 
     // Top-Left Wall
     for(let i = 0; i < shelvesPerWall; i++) {
         const gx = 0; 
-        const gy = i * 3 + 1;
+        const gy = i * 2 + 1;
         
         const pos = toIso(gx, gy);
         
@@ -318,7 +318,7 @@
 
     // Top-Right Wall
     for(let i = 0; i < shelvesPerWall; i++) {
-        const gx = i * 3 + 1; 
+        const gx = i * 2 + 1; 
         const gy = 0;
         
         const pos = toIso(gx, gy);
