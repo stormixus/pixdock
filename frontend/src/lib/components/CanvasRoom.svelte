@@ -6,9 +6,9 @@
   let ctx: CanvasRenderingContext2D | null;
   let animationId: number;
   let containerWidth = 0;
-  let containerHeight = window.innerHeight * 0.7; // 70% of viewport height
+  let containerHeight = window.innerHeight * 0.7; // Initially 70% of viewport height
 
-  // Isometric Grid Config (for agents)
+  // Isometric Grid Config
   const T_W = 60; // Tile Width
   const T_H = 30; // Tile Height
   const COLS = 16;
@@ -25,20 +25,26 @@
   // Assets
   let assetsLoaded = false;
   const imgWhale = new Image();
-  const imgBg = new Image();
+  const imgDesk = new Image();
+  const imgBookshelf = new Image();
+  const imgServer = new Image();
 
   onMount(() => {
     // Preload images
     let loadedCount = 0;
     const onLoad = () => {
       loadedCount++;
-      if (loadedCount === 2) assetsLoaded = true;
+      if (loadedCount === 4) assetsLoaded = true;
     };
     imgWhale.onload = onLoad;
-    imgBg.onload = onLoad;
+    imgDesk.onload = onLoad;
+    imgBookshelf.onload = onLoad;
+    imgServer.onload = onLoad;
     
     imgWhale.src = '/assets/agent_whale.png';
-    imgBg.src = '/assets/server_room_bg.jpg';
+    imgDesk.src = '/assets/new_desk.png';
+    imgBookshelf.src = '/assets/new_rack.png';
+    imgServer.src = '/assets/new_server.png';
 
     ctx = canvas.getContext('2d');
     loop();
@@ -251,31 +257,169 @@
     ctx.restore();
   }
 
-  function drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number) {
-    if (!imgBg.complete || imgBg.width === 0) {
-      ctx.fillStyle = COLORS.bg;
-      ctx.fillRect(0, 0, width, height);
-      return;
+  function drawFloor(ctx: CanvasRenderingContext2D, width: number, height: number) {
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = COLORS.floorGrid;
+    ctx.lineWidth = 1;
+
+    for (let gx = 0; gx < COLS; gx++) {
+      for (let gy = 0; gy < ROWS; gy++) {
+        const {x, y} = toIso(gx, gy);
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y - T_H/2);
+        ctx.lineTo(x + T_W/2, y);
+        ctx.lineTo(x, y + T_H/2);
+        ctx.lineTo(x - T_W/2, y);
+        ctx.closePath();
+
+        // Checkered floor pattern
+        ctx.fillStyle = (gx + gy) % 2 === 0 ? '#10101d' : '#141424';
+        ctx.fill();
+        ctx.stroke();
+      }
     }
+  }
+
+  function drawBookshelves(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
+    const shelfW = 90; // Logical Shelf Width (Enlarged)
+    const shelfH = 120; // Logical Shelf Height (Enlarged)
     
-    // Scale image to COVER the canvas
-    const imgRatio = imgBg.width / imgBg.height;
-    const canvasRatio = width / height;
-    
-    let drawW = width;
-    let drawH = height;
-    let offsetX = 0;
-    let offsetY = 0;
-    
-    if (canvasRatio > imgRatio) {
-       drawH = width / imgRatio;
-       offsetY = (height - drawH) / 2;
-    } else {
-       drawW = height * imgRatio;
-       offsetX = (width - drawW) / 2;
+    // Fill the top-left isometric wall (gx = 0, gy varies)
+    const shelvesPerWall = Math.floor(ROWS / 2) - 1; // Reduce count slightly so they don't overflow the back corner
+
+    // Top-Left Wall (Repository Image Rack)
+    for(let i = 0; i < shelvesPerWall; i++) {
+        const gx = 0; 
+        const gy = i * 2 + 1;
+        
+        const pos = toIso(gx, gy);
+        
+        renderQueue.push({
+            depth: gx + gy - 0.1, // Slightly behind center of tile
+            render: () => {
+                ctx.save();
+                ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.beginPath();
+                ctx.ellipse(0, T_H/4, shelfW/2.5, shelfW/5, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Bookshelf Sprite (anchor bottom-center)
+                ctx.scale(-1, 1); // Flip horizontally to stick to the left wall
+                ctx.drawImage(imgBookshelf, -shelfW/2, -shelfH + T_H/2 + 8, shelfW, shelfH);
+
+                ctx.restore();
+            }
+        });
     }
+
+    // Top-Right Wall
+    for(let i = 0; i < shelvesPerWall; i++) {
+        const gx = i * 2 + 1; 
+        const gy = 0;
+        
+        const pos = toIso(gx, gy);
+        
+        renderQueue.push({
+            depth: gx + gy - 0.1, // Slightly behind center of tile
+            render: () => {
+                ctx.save();
+                ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.beginPath();
+                ctx.ellipse(0, T_H/4, shelfW/2.5, shelfW/5, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Bookshelf Sprite (anchor bottom-center)
+                ctx.drawImage(imgBookshelf, -shelfW/2, -shelfH + T_H/2 + 8, shelfW, shelfH);
+
+                ctx.restore();
+            }
+        });
+    }
+  }
+
+  function drawServerUnits(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
+      // Place a large Server Rack unit representing the Datacenter main frame
+      const serverW = 100;
+      const serverH = 180;
+      const gx = 0;
+      const gy = ROWS - 3;
+      const pos = toIso(gx, gy);
+
+      renderQueue.push({
+          depth: gx + gy, // Isometric Depth Sorting
+          render: () => {
+              ctx.save();
+              ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
+              
+              // Shadow
+              ctx.fillStyle = 'rgba(0,0,0,0.6)';
+              ctx.beginPath();
+              ctx.ellipse(0, T_H/3, serverW/2.5, serverW/5, 0, 0, Math.PI*2);
+              ctx.fill();
+
+              // Big Server Unit
+              ctx.drawImage(imgServer, -serverW/2, -serverH + T_H, serverW, serverH);
+              
+              ctx.restore();
+          }
+      });
+  }
+
+  function drawDesks(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
+    const numNodes = $dockerMode === 'swarm' ? Math.max(1, $nodes.length) : 1;
     
-    ctx.drawImage(imgBg, offsetX, offsetY, drawW, drawH);
+    const deskW = 120; // Logical Desk Width (Enlarged to match illustration scaling)
+    const deskH = 120; // Logical Desk Height
+    
+    // We will place desks in the middle area (gx: 4-8, gy: 4-8)
+    const maxDesksPerRow = Math.floor((COLS - 4) / 4);
+    
+    for(let i=0; i<numNodes; i++) {
+        const row = Math.floor(i / maxDesksPerRow);
+        const col = i % maxDesksPerRow;
+        
+        // Distribute desks in the middle of the room
+        const gx = 4 + (col * 4);
+        const gy = 4 + (row * 4);
+        const nodeName = $dockerMode === 'swarm' && $nodes[i] ? $nodes[i].hostname : "LOCAL HOST";
+
+        const pos = toIso(gx, gy);
+
+        renderQueue.push({
+            depth: gx + gy, // Isometric Depth
+            render: () => {
+                ctx.save();
+                ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.beginPath();
+                ctx.ellipse(0, T_H/4, deskW/3, deskW/6, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Desk Sprite
+                ctx.drawImage(imgDesk, -deskW/2 + 5, -deskH + T_H/2 + 10, deskW, deskH);
+
+                // Draw Server details label below the desk
+                ctx.fillStyle = COLORS.eye;
+                ctx.font = "8px 'Press Start 2P', monospace";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                ctx.fillText(`[${nodeName.substring(0,8)}]`, 5, T_H/2 + 12);
+
+                ctx.restore();
+            }
+        });
+    }
   }
 
   function render() {
@@ -298,12 +442,21 @@
     // High Res Images look better when smoothed down
     ctx.imageSmoothingEnabled = true;
 
-    // Background
-    drawBackground(ctx, canvas.width, canvas.height);
+    // Background and Floors
+    drawFloor(ctx, canvas.width, canvas.height);
     
     if (!assetsLoaded) return; // Wait for sprites to load
 
     const renderQueue: {depth: number, render: () => void}[] = [];
+
+    // Bookshelves (Images)
+    drawBookshelves(ctx, renderQueue);
+
+    // Nodes as Desks
+    drawDesks(ctx, renderQueue);
+    
+    // Main Server Rack Unit
+    drawServerUnits(ctx, renderQueue);
 
     // Agents (Containers)
     agents.forEach(agent => {
