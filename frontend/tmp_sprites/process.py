@@ -33,11 +33,7 @@ for img_info in images:
     if bbox:
         img = img.crop(bbox)
 
-    # Resize nearest neighbor
-    new_w = int(img.size[0] * img_info['scale'])
-    new_h = int(img.size[1] * img_info['scale'])
-    # In Pillow >= 10, ANTIALIAS is removed, use NEAREST
-    img = img.resize((new_w, new_h), resample=Image.Resampling.NEAREST)
+    # Resize nearest neighbor - REMOVED per user request to keep high-res
 
     out_path = os.path.join(dest_dir, img_info['name'])
     img.save(out_path)

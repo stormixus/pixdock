@@ -6,13 +6,13 @@
   let ctx: CanvasRenderingContext2D | null;
   let animationId: number;
   let containerWidth = 0;
-  let containerHeight = 350; // Increased height to fit isometric grid
+  let containerHeight = window.innerHeight * 0.5; // Initially 50% of viewport height
 
   // Isometric Grid Config
   const T_W = 60; // Tile Width
   const T_H = 30; // Tile Height
-  const COLS = 12;
-  const ROWS = 12;
+  const COLS = 16;
+  const ROWS = 16;
 
   function toIso(gx: number, gy: number) {
     const originX = (canvas?.width || 800) / 2;
@@ -214,8 +214,8 @@
         ctx.scale(-1, 1);
     }
 
-    const w = imgWhale.width;
-    const h = imgWhale.height;
+    const w = 50; // Logical Whale Width
+    const h = 50; // Logical Whale Height
     
     const bodyColor = getAgentColor(agent.state);
     
@@ -281,8 +281,8 @@
   }
 
   function drawBookshelves(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
-    const shelfW = imgBookshelf.width;
-    const shelfH = imgBookshelf.height;
+    const shelfW = 70; // Logical Shelf Width
+    const shelfH = 90; // Logical Shelf Height
     
     // Fill the top-left isometric wall (gx = 0, gy varies)
     const shelvesPerWall = Math.floor(ROWS / 3);
@@ -308,6 +308,7 @@
                 ctx.fill();
 
                 // Bookshelf Sprite (anchor bottom-center to base of diamond)
+                ctx.scale(-1, 1); // Flip horizontally to stick to the left wall
                 ctx.drawImage(imgBookshelf, -shelfW/2, -shelfH + T_H/2 + 8, shelfW, shelfH);
 
                 ctx.restore();
@@ -348,8 +349,8 @@
   function drawDesks(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
     const numNodes = $dockerMode === 'swarm' ? Math.max(1, $nodes.length) : 1;
     
-    const deskW = imgDesk.width;
-    const deskH = imgDesk.height;
+    const deskW = 90; // Logical Desk Width
+    const deskH = 90; // Logical Desk Height
     
     // We will place desks in the middle area (gx: 4-8, gy: 4-8)
     const maxDesksPerRow = Math.floor((COLS - 4) / 4);
@@ -399,15 +400,19 @@
     const parent = canvas.parentElement;
     if (parent) {
       const rect = parent.getBoundingClientRect();
-      if (rect.width !== canvas.width || containerHeight !== canvas.height) {
+      // Ensure height is at least 50vh dynamically
+      const targetHeight = window.innerHeight * 0.5;
+      
+      if (rect.width !== canvas.width || targetHeight !== canvas.height) {
         canvas.width = rect.width;
-        canvas.height = containerHeight;
+        canvas.height = targetHeight;
         containerWidth = rect.width;
+        containerHeight = targetHeight;
       }
     }
 
-    // Reset Context smoothing each frame to be safe
-    ctx.imageSmoothingEnabled = false;
+    // High Res Images look better when smoothed down
+    ctx.imageSmoothingEnabled = true;
 
     // Background and Floors
     drawFloor(ctx, canvas.width, canvas.height);
@@ -454,7 +459,8 @@
 <style>
   .canvas-container {
     width: 100%;
-    height: 300px;
+    min-height: 50vh;
+    height: 50vh;
     background: var(--bg-dark);
     position: relative;
     overflow: hidden;
