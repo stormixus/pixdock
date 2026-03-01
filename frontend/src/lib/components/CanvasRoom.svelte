@@ -6,7 +6,21 @@
   let ctx: CanvasRenderingContext2D | null;
   let animationId: number;
   let containerWidth = 0;
-  let containerHeight = 300; // Fixed initial height
+  let containerHeight = 350; // Increased height to fit isometric grid
+
+  // Isometric Grid Config
+  const T_W = 60; // Tile Width
+  const T_H = 30; // Tile Height
+  const COLS = 12;
+  const ROWS = 12;
+
+  function toIso(gx: number, gy: number) {
+    const originX = (canvas?.width || 800) / 2;
+    const originY = 80; // Start drawing down a bit
+    const isoX = originX + (gx - gy) * (T_W / 2);
+    const isoY = originY + (gx + gy) * (T_H / 2);
+    return { x: isoX, y: isoY };
+  }
 
   // Assets
   let assetsLoaded = false;
@@ -36,13 +50,11 @@
   // Metaphor entities
   interface Agent {
     id: string;
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
+    gx: number;
+    gy: number;
+    targetGx: number;
+    targetGy: number;
     state: string; // 'running', 'exited', etc.
-    targetX: number;
-    targetY: number;
     waitTimer: number;
     dir: 'left' | 'right' | 'up' | 'down';
     frame: number;
@@ -81,13 +93,11 @@
         // Spawn new agent
         const newAgent: Agent = {
           id: c.id,
-          x: rnd(20, (canvas?.width || 600) - 20),
-          y: rnd(70, containerHeight - 20),
-          vx: 0,
-          vy: 0,
+          gx: rnd(1, COLS - 1),
+          gy: rnd(1, ROWS - 1),
           state: c.state,
-          targetX: 0,
-          targetY: 0,
+          targetGx: 0,
+          targetGy: 0,
           waitTimer: 0,
           dir: 'down',
           frame: 0
@@ -109,13 +119,12 @@
   }
 
   function assignNewTarget(agent: Agent) {
-    if (!canvas) return;
-    agent.targetX = rnd(20, canvas.width - 20);
-    agent.targetY = rnd(20, canvas.height - 20);
+    agent.targetGx = Math.floor(rnd(1, COLS - 1));
+    agent.targetGy = Math.floor(rnd(1, ROWS - 1));
     agent.waitTimer = rnd(20, 150); // frames to wait at destination
     
-    const dx = agent.targetX - agent.x;
-    const dy = agent.targetY - agent.y;
+    const dx = agent.targetGx - agent.gx;
+    const dy = agent.targetGy - agent.gy;
     
     if (Math.abs(dx) > Math.abs(dy)) {
       agent.dir = dx > 0 ? 'right' : 'left';
@@ -136,19 +145,20 @@
           assignNewTarget(agent);
         }
       } else {
-        const dx = agent.targetX - agent.x;
-        const dy = agent.targetY - agent.y;
+        const dx = agent.targetGx - agent.gx;
+        const dy = agent.targetGy - agent.gy;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < 2) {
-          agent.x = agent.targetX;
-          agent.y = agent.targetY;
+        if (dist < 0.1) {
+          agent.gx = agent.targetGx;
+          agent.gy = agent.targetGy;
           agent.waitTimer = rnd(60, 200);
           agent.frame = 0;
         } else {
-          const speed = 0.8;
-          agent.x += (dx / dist) * speed;
-          agent.y += (dy / dist) * speed;
+          // Speed in logical grid units
+          const speed = 0.05;
+          agent.gx += (dx / dist) * speed;
+          agent.gy += (dy / dist) * speed;
           
           // Animate (ticks every 15 frames approx)
           agent.frame = Math.floor(Date.now() / 150) % 2; 
@@ -161,11 +171,11 @@
           }
         }
         
-        // Boundaries
-        if (agent.x < 10) agent.x = 10;
-        if (agent.x > canvas.width - 10) agent.x = canvas.width - 10;
-        if (agent.y < 80) agent.y = 80; // Keep off top walls & bookshelves
-        if (agent.y > canvas.height - 10) agent.y = canvas.height - 10;
+        // Logical Boundaries
+        if (agent.gx < 0) agent.gx = 0;
+        if (agent.gx > COLS - 1) agent.gx = COLS - 1;
+        if (agent.gy < 0) agent.gy = 0;
+        if (agent.gy > ROWS - 1) agent.gy = ROWS - 1;
       }
     });
   }
@@ -183,12 +193,8 @@
   function drawAgent(ctx: CanvasRenderingContext2D, agent: Agent) {
     ctx.save();
     
-    // Draw directly from integer positions to maintain crispness
-    const px = Math.floor(agent.x);
-    const py = Math.floor(agent.y);
-    ctx.translate(px, py);
-    
-    const s = 4; // pixel scale match approximately
+    const isoPos = toIso(agent.gx, agent.gy);
+    ctx.translate(Math.floor(isoPos.x), Math.floor(isoPos.y));
     
     // Bobbing animation Y offset
     let bobY = 0;
@@ -196,36 +202,33 @@
        bobY = -2; // Jump up 2 pixels
     }
 
-    // Draw shadow
+    // Draw shadow (isometric ellipse approximations)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillRect(-10, 10, 20, 6);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     ctx.translate(0, bobY);
 
-    // If facing right, flip the image horizontally because our whale sprite faces left/neutral
     if (agent.dir === 'right') {
         ctx.scale(-1, 1);
     }
 
-    // Draw Whale Sprite (centered)
-    // The sprite bounding box needs to be centered around 0,0
     const w = imgWhale.width;
     const h = imgWhale.height;
     
-    // Tint color based on state using globalCompositeOperation
     const bodyColor = getAgentColor(agent.state);
     
     if (agent.state !== 'running') {
-       // Optional: Add simple color tint/grayscale if not running
-       // For now, let's just make non-running agents slightly translucent
        ctx.globalAlpha = 0.6;
     }
     
-    ctx.drawImage(imgWhale, -w/2, -h/2, w, h);
+    // Agent rendered resting exactly on its anchor point
+    ctx.drawImage(imgWhale, -w/2, -h + 6, w, h);
     ctx.globalAlpha = 1.0;
     
     if (agent.dir === 'right') {
-        ctx.scale(-1, 1); // restore scale axis
+        ctx.scale(-1, 1); 
     }
 
     // Label / Name
@@ -240,13 +243,13 @@
     
     // Label Background
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(-textWidth/2 - 2, -h/2 - 14, textWidth + 4, 12);
+    ctx.fillRect(-textWidth/2 - 2, -h - 10, textWidth + 4, 12);
     
     // Label Text
     ctx.fillStyle = bodyColor;
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText(label, 0, -h/2 - 4);
+    ctx.fillText(label, 0, -h);
 
     ctx.restore();
   }
@@ -256,42 +259,85 @@
     ctx.fillRect(0, 0, width, height);
 
     ctx.strokeStyle = COLORS.floorGrid;
-    ctx.lineWidth = 2;
-    const tileSize = 32;
-    
-    ctx.beginPath();
-    for (let x = 0; x <= width; x += tileSize) {
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+    ctx.lineWidth = 1;
+
+    for (let gx = 0; gx < COLS; gx++) {
+      for (let gy = 0; gy < ROWS; gy++) {
+        const {x, y} = toIso(gx, gy);
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y - T_H/2);
+        ctx.lineTo(x + T_W/2, y);
+        ctx.lineTo(x, y + T_H/2);
+        ctx.lineTo(x - T_W/2, y);
+        ctx.closePath();
+
+        // Checkered floor pattern
+        ctx.fillStyle = (gx + gy) % 2 === 0 ? '#10101d' : '#141424';
+        ctx.fill();
+        ctx.stroke();
+      }
     }
-    for (let y = 0; y <= height; y += tileSize) {
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-    }
-    ctx.stroke();
   }
 
-  function drawBookshelves(ctx: CanvasRenderingContext2D, width: number, renderQueue: {y: number, render: () => void}[]) {
-    const shelfW = imgBookshelf.width || 64;
-    const shelfH = imgBookshelf.height || 64;
-    const numShelves = Math.floor(width / shelfW); // Fill top wall
+  function drawBookshelves(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
+    const shelfW = imgBookshelf.width;
+    const shelfH = imgBookshelf.height;
+    
+    // Fill the top-left isometric wall (gx = 0, gy varies)
+    const shelvesPerWall = Math.floor(ROWS / 3);
 
-    for(let i=0; i<numShelves; i++) {
-        const x = i * shelfW;
-        const y = 0; // Top edge
+    // Top-Left Wall
+    for(let i = 0; i < shelvesPerWall; i++) {
+        const gx = 0; 
+        const gy = i * 3 + 1;
+        
+        const pos = toIso(gx, gy);
         
         renderQueue.push({
-            y: y + shelfH, // Sort by bottom of the bookshelf
+            depth: gx + gy - 0.1, // Slightly behind center of tile
             render: () => {
                 ctx.save();
-                ctx.translate(x, y);
+                ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
 
                 // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                ctx.fillRect(0, shelfH - 10, shelfW, 12);
+                // Elliptical shadow matching bookshelf footprint
+                ctx.beginPath();
+                ctx.ellipse(0, T_H/4, shelfW/2.5, shelfW/5, 0, 0, Math.PI*2);
+                ctx.fill();
 
-                // Bookshelf Sprite
-                ctx.drawImage(imgBookshelf, 0, 0, shelfW, shelfH);
+                // Bookshelf Sprite (anchor bottom-center to base of diamond)
+                ctx.drawImage(imgBookshelf, -shelfW/2, -shelfH + T_H/2 + 8, shelfW, shelfH);
+
+                ctx.restore();
+            }
+        });
+    }
+
+    // Top-Right Wall
+    for(let i = 0; i < shelvesPerWall; i++) {
+        const gx = i * 3 + 1; 
+        const gy = 0;
+        
+        const pos = toIso(gx, gy);
+        
+        renderQueue.push({
+            depth: gx + gy - 0.1, // Slightly behind center of tile
+            render: () => {
+                ctx.save();
+                ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                // Elliptical shadow matching bookshelf footprint
+                ctx.beginPath();
+                ctx.ellipse(0, T_H/4, shelfW/2.5, shelfW/5, 0, 0, Math.PI*2);
+                ctx.fill();
+
+                // Bookshelf Sprite (anchor bottom-center)
+                // Note: The bookshelf image might have built in perspective, but we use the same one.
+                ctx.drawImage(imgBookshelf, -shelfW/2, -shelfH + T_H/2 + 8, shelfW, shelfH);
 
                 ctx.restore();
             }
@@ -299,49 +345,51 @@
     }
   }
 
-  function drawDesks(ctx: CanvasRenderingContext2D, width: number, renderQueue: {y: number, render: () => void}[]) {
+  function drawDesks(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
     const numNodes = $dockerMode === 'swarm' ? Math.max(1, $nodes.length) : 1;
     
-    const deskW = imgDesk.width || 80;
-    const deskH = imgDesk.height || 80;
-    const padding = 20;
-
-    let currentX = padding;
-    let currentY = 100 + padding; // Below bookshelves
-
+    const deskW = imgDesk.width;
+    const deskH = imgDesk.height;
+    
+    // We will place desks in the middle area (gx: 4-8, gy: 4-8)
+    const maxDesksPerRow = Math.floor((COLS - 4) / 4);
+    
     for(let i=0; i<numNodes; i++) {
-        const x = currentX;
-        const y = currentY;
+        const row = Math.floor(i / maxDesksPerRow);
+        const col = i % maxDesksPerRow;
+        
+        // Distribute desks in the middle of the room
+        const gx = 4 + (col * 4);
+        const gy = 4 + (row * 4);
         const nodeName = $dockerMode === 'swarm' && $nodes[i] ? $nodes[i].hostname : "LOCAL HOST";
 
+        const pos = toIso(gx, gy);
+
         renderQueue.push({
-            y: y + deskH, // Sort by bottom of desk
+            depth: gx + gy, // Isometric Depth
             render: () => {
                 ctx.save();
+                ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
                 
                 // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(x + 10, y + deskH - 20, deskW - 20, 20);
+                ctx.beginPath();
+                ctx.ellipse(0, T_H/4, deskW/3, deskW/6, 0, 0, Math.PI*2);
+                ctx.fill();
 
                 // Desk Sprite
-                ctx.drawImage(imgDesk, x, y, deskW, deskH);
+                ctx.drawImage(imgDesk, -deskW/2 + 5, -deskH + T_H/2 + 10, deskW, deskH);
 
-                // Draw Server details label
+                // Draw Server details label below the desk
                 ctx.fillStyle = COLORS.eye;
                 ctx.font = "8px 'Press Start 2P', monospace";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "top";
-                ctx.fillText(`[${nodeName.substring(0,8)}]`, x + deskW/2, y + deskH);
+                ctx.fillText(`[${nodeName.substring(0,8)}]`, 5, T_H/2 + 12);
 
                 ctx.restore();
             }
         });
-
-        currentX += deskW + padding * 2;
-        if (currentX + deskW > width) {
-            currentX = padding;
-            currentY += deskH + padding * 2;
-        }
     }
   }
 
@@ -366,24 +414,24 @@
     
     if (!assetsLoaded) return; // Wait for sprites to load
 
-    const renderQueue: {y: number, render: () => void}[] = [];
+    const renderQueue: {depth: number, render: () => void}[] = [];
 
     // Bookshelves (Images)
-    drawBookshelves(ctx, canvas.width, renderQueue);
+    drawBookshelves(ctx, renderQueue);
 
     // Nodes as Desks
-    drawDesks(ctx, canvas.width, renderQueue);
+    drawDesks(ctx, renderQueue);
 
     // Agents (Containers)
     agents.forEach(agent => {
       renderQueue.push({
-          y: agent.y, // Sort by bottom of agent
+          depth: agent.gx + agent.gy, // Isometric Depth Sorting
           render: () => drawAgent(ctx!, agent)
       });
     });
 
-    // Execute Z-Sorted Render Queue
-    renderQueue.sort((a, b) => a.y - b.y).forEach(item => item.render());
+    // Execute Z-Sorted Render Queue based on Depth
+    renderQueue.sort((a, b) => a.depth - b.depth).forEach(item => item.render());
   }
 
   function loop() {
