@@ -22,29 +22,31 @@
     return { x: isoX, y: isoY };
   }
 
-  // Assets
   let assetsLoaded = false;
   const imgWhale = new Image();
   const imgDesk = new Image();
   const imgBookshelf = new Image();
   const imgServer = new Image();
+  const imgWall = new Image();
 
   onMount(() => {
     // Preload images
     let loadedCount = 0;
     const onLoad = () => {
       loadedCount++;
-      if (loadedCount === 4) assetsLoaded = true;
+      if (loadedCount === 5) assetsLoaded = true;
     };
     imgWhale.onload = onLoad;
     imgDesk.onload = onLoad;
     imgBookshelf.onload = onLoad;
     imgServer.onload = onLoad;
+    imgWall.onload = onLoad;
     
     imgWhale.src = '/assets/agent_whale.png';
     imgDesk.src = '/assets/new_desk.png';
     imgBookshelf.src = '/assets/new_rack.png';
     imgServer.src = '/assets/new_server.png';
+    imgWall.src = '/assets/brick_wall.png';
 
     ctx = canvas.getContext('2d');
     loop();
@@ -96,8 +98,8 @@
         // Spawn new agent
         const newAgent: Agent = {
           id: c.id,
-          gx: rnd(1, COLS - 1),
-          gy: rnd(1, ROWS - 1),
+          gx: rnd(3, COLS - 2),
+          gy: rnd(3, ROWS - 2),
           state: c.state,
           targetGx: 0,
           targetGy: 0,
@@ -122,8 +124,8 @@
   }
 
   function assignNewTarget(agent: Agent) {
-    agent.targetGx = Math.floor(rnd(1, COLS - 1));
-    agent.targetGy = Math.floor(rnd(1, ROWS - 1));
+    agent.targetGx = Math.floor(rnd(3, COLS - 2));
+    agent.targetGy = Math.floor(rnd(3, ROWS - 2));
     agent.waitTimer = rnd(20, 150); // frames to wait at destination
     
     const dx = agent.targetGx - agent.gx;
@@ -174,11 +176,11 @@
           }
         }
         
-        // Logical Boundaries
-        if (agent.gx < 0) agent.gx = 0;
-        if (agent.gx > COLS - 1) agent.gx = COLS - 1;
-        if (agent.gy < 0) agent.gy = 0;
-        if (agent.gy > ROWS - 1) agent.gy = ROWS - 1;
+        // Logical Boundaries (keep inside walls)
+        if (agent.gx < 3) agent.gx = 3;
+        if (agent.gx > COLS - 2) agent.gx = COLS - 2;
+        if (agent.gy < 3) agent.gy = 3;
+        if (agent.gy > ROWS - 2) agent.gy = ROWS - 2;
       }
     });
   }
@@ -283,63 +285,44 @@
     }
   }
 
-  function drawBookshelves(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
-    const shelfW = 90; // Logical Shelf Width (Enlarged)
-    const shelfH = 120; // Logical Shelf Height (Enlarged)
+  function drawWalls(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
+    const wallW = 80; 
+    const wallH = 140; 
     
-    // Fill the top-left isometric wall (gx = 0, gy varies)
-    const shelvesPerWall = Math.floor(ROWS / 2) - 1; // Reduce count slightly so they don't overflow the back corner
-
-    // Top-Left Wall (Repository Image Rack)
-    for(let i = 0; i < shelvesPerWall; i++) {
-        const gx = 0; 
-        const gy = i * 2 + 1;
-        
+    // Left Wall (gx = 2, gy varies 2..ROWS-1)
+    for(let i = 2; i < ROWS - 1; i++) {
+        const gx = 2; 
+        const gy = i;
         const pos = toIso(gx, gy);
         
         renderQueue.push({
-            depth: gx + gy - 0.1, // Slightly behind center of tile
+            depth: gx + gy - 0.2, // Slightly behind center of tile
             render: () => {
                 ctx.save();
                 ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
 
-                // Shadow
-                ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                ctx.beginPath();
-                ctx.ellipse(0, T_H/4, shelfW/2.5, shelfW/5, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // Bookshelf Sprite (anchor bottom-center)
-                ctx.scale(-1, 1); // Flip horizontally to stick to the left wall
-                ctx.drawImage(imgBookshelf, -shelfW/2, -shelfH + T_H/2 + 8, shelfW, shelfH);
-
+                // Wall Sprite (Left Wall faces South-East, original image orientation)
+                ctx.drawImage(imgWall, -wallW/2, -wallH + T_H/2 + 10, wallW, wallH);
                 ctx.restore();
             }
         });
     }
 
-    // Top-Right Wall
-    for(let i = 0; i < shelvesPerWall; i++) {
-        const gx = i * 2 + 1; 
-        const gy = 0;
-        
+    // Right Wall (gx varies 2..COLS-1, gy = 2)
+    for(let i = 3; i < COLS - 1; i++) {
+        const gx = i; 
+        const gy = 2;
         const pos = toIso(gx, gy);
         
         renderQueue.push({
-            depth: gx + gy - 0.1, // Slightly behind center of tile
+            depth: gx + gy - 0.2, 
             render: () => {
                 ctx.save();
                 ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
 
-                // Shadow
-                ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                ctx.beginPath();
-                ctx.ellipse(0, T_H/4, shelfW/2.5, shelfW/5, 0, 0, Math.PI*2);
-                ctx.fill();
-
-                // Bookshelf Sprite (anchor bottom-center)
-                ctx.drawImage(imgBookshelf, -shelfW/2, -shelfH + T_H/2 + 8, shelfW, shelfH);
-
+                // Right Wall faces South-West, flip horizontally
+                ctx.scale(-1, 1);
+                ctx.drawImage(imgWall, -wallW/2, -wallH + T_H/2 + 10, wallW, wallH);
                 ctx.restore();
             }
         });
@@ -347,31 +330,30 @@
   }
 
   function drawServerUnits(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
-      // Place a large Server Rack unit representing the Datacenter main frame
-      const serverW = 100;
-      const serverH = 180;
-      const gx = 0;
-      const gy = ROWS - 3;
-      const pos = toIso(gx, gy);
+      // Place Servers behind the left brick wall (gx = 0, gy = 3..14)
+      const serverW = 90;
+      const serverH = 150;
+      
+      for(let i = 3; i < ROWS - 2; i += 2) {
+          const gx = 0;
+          const gy = i;
+          const pos = toIso(gx, gy);
 
-      renderQueue.push({
-          depth: gx + gy, // Isometric Depth Sorting
-          render: () => {
-              ctx.save();
-              ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
-              
-              // Shadow
-              ctx.fillStyle = 'rgba(0,0,0,0.6)';
-              ctx.beginPath();
-              ctx.ellipse(0, T_H/3, serverW/2.5, serverW/5, 0, 0, Math.PI*2);
-              ctx.fill();
-
-              // Big Server Unit
-              ctx.drawImage(imgServer, -serverW/2, -serverH + T_H, serverW, serverH);
-              
-              ctx.restore();
-          }
-      });
+          renderQueue.push({
+              depth: gx + gy, // Isometric Depth Sorting (Will be smaller than wall's depth, rendering behind)
+              render: () => {
+                  ctx.save();
+                  ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
+                  
+                  // Big Server Unit
+                  ctx.globalAlpha = 0.5; // Dimmed because it's behind the wall, or we keep it lit. Let's keep it lit.
+                  ctx.globalAlpha = 1.0;
+                  ctx.drawImage(imgServer, -serverW/2, -serverH + T_H, serverW, serverH);
+                  
+                  ctx.restore();
+              }
+          });
+      }
   }
 
   function drawDesks(ctx: CanvasRenderingContext2D, renderQueue: {depth: number, render: () => void}[]) {
@@ -380,16 +362,15 @@
     const deskW = 120; // Logical Desk Width (Enlarged to match illustration scaling)
     const deskH = 120; // Logical Desk Height
     
-    // We will place desks in the middle area (gx: 4-8, gy: 4-8)
-    const maxDesksPerRow = Math.floor((COLS - 4) / 4);
+    // We will place desks in the middle area (gx: 6-10, gy: 6-10) to be well inside the walls
+    const maxDesksPerRow = Math.floor((COLS - 6) / 4);
     
     for(let i=0; i<numNodes; i++) {
         const row = Math.floor(i / maxDesksPerRow);
         const col = i % maxDesksPerRow;
         
-        // Distribute desks in the middle of the room
-        const gx = 4 + (col * 4);
-        const gy = 4 + (row * 4);
+        const gx = 6 + (col * 4);
+        const gy = 6 + (row * 4);
         const nodeName = $dockerMode === 'swarm' && $nodes[i] ? $nodes[i].hostname : "LOCAL HOST";
 
         const pos = toIso(gx, gy);
@@ -449,14 +430,14 @@
 
     const renderQueue: {depth: number, render: () => void}[] = [];
 
-    // Bookshelves (Images)
-    drawBookshelves(ctx, renderQueue);
-
-    // Nodes as Desks
-    drawDesks(ctx, renderQueue);
-    
-    // Main Server Rack Unit
+    // Main Server Rack Units (Placed Behind Left Wall)
     drawServerUnits(ctx, renderQueue);
+
+    // Walls
+    drawWalls(ctx, renderQueue);
+
+    // Nodes as Desks (Inside room)
+    drawDesks(ctx, renderQueue);
 
     // Agents (Containers)
     agents.forEach(agent => {
