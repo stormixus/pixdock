@@ -3,7 +3,7 @@
   import NodeRack from './NodeRack.svelte';
   import ServiceList from './ServiceList.svelte';
   import ContainerGrid from './ContainerGrid.svelte';
-  import CanvasRoom from './CanvasRoom.svelte';
+  import SystemOverview from './SystemOverview.svelte';
   import PixelStatusBar from './PixelStatusBar.svelte';
   import Toast from './Toast.svelte';
 </script>
@@ -37,7 +37,7 @@
     <main class="main">
       <section class="section">
         <h2 class="section-title">&#9654; SYSTEM OVERVIEW</h2>
-        <CanvasRoom />
+        <SystemOverview />
       </section>
 
       {#if $dockerMode === 'swarm'}
