@@ -33,3 +33,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Utils
 chrono = { version = "0.4", features = ["serde"] }
 urlencoding = "2"
+subtle = "2"

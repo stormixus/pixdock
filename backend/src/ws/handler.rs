@@ -5,6 +5,7 @@ use axum::response::{IntoResponse, Response};
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use subtle::ConstantTimeEq;
 use tokio::sync::broadcast;
 
 use crate::docker::client::DockerClient;
@@ -68,7 +69,7 @@ pub async fn ws_handler(
     if let Ok(expected) = std::env::var("PIXDOCK_TOKEN") {
         if !expected.is_empty() {
             match &query.token {
-                Some(token) if token == &expected => {}
+                Some(token) if bool::from(token.as_bytes().ct_eq(expected.as_bytes())) => {}
                 _ => return StatusCode::UNAUTHORIZED.into_response(),
             }
         }

@@ -71,7 +71,7 @@ export interface DashboardState {
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
 // Read token from meta tag or localStorage
-function getAuthToken(): string | null {
+export function getAuthToken(): string | null {
   return localStorage.getItem('pixdock_token');
 }
 
@@ -89,7 +89,8 @@ const RECONNECT_MAX_MS = 60000;
 
 export function createWebSocket(
   onState: (state: DashboardState) => void,
-  onStatus: (status: ConnectionStatus) => void
+  onStatus: (status: ConnectionStatus) => void,
+  onAuthError?: () => void
 ) {
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout>;
@@ -123,7 +124,13 @@ export function createWebSocket(
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      // Code 1008 = Policy Violation (used for 401 Unauthorized on WS upgrade)
+      if (event.code === 1008 || event.code === 4001) {
+        onStatus('disconnected');
+        onAuthError?.();
+        return; // Do not reconnect on auth failure
+      }
       onStatus('disconnected');
       // Exponential backoff with jitter
       const delay = Math.min(
@@ -186,4 +193,26 @@ export async function containerAction(containerId: string, action: 'start' | 'st
     body: JSON.stringify({ action })
   });
   if (!res.ok) throw new Error(`Failed to ${action} container: ${res.status}`);
+}
+
+export interface DockerImage {
+  id: string;
+  repo_tags: string[];
+  size: number;
+  created: number;
+  containers: number;
+}
+
+export async function fetchImages(): Promise<DockerImage[]> {
+  const res = await fetch('/api/images', { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch images: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteImage(imageId: string): Promise<void> {
+  const res = await fetch(`/api/images/${imageId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to delete image: ${res.status}`);
 }

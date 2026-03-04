@@ -151,3 +151,66 @@ impl DockerClient {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_swarm_service_roundtrip() {
+        let svc = SwarmService {
+            id: "svc123".to_string(),
+            name: "web".to_string(),
+            image: "nginx:latest".to_string(),
+            replicas_running: 3,
+            replicas_desired: 3,
+            ports: vec![ServicePort {
+                published: 80,
+                target: 80,
+                protocol: "tcp".to_string(),
+            }],
+            updated_at: "2024-01-01T00:00:00Z".to_string(),
+            stack: Some("mystack".to_string()),
+        };
+        let json = serde_json::to_string(&svc).unwrap();
+        let parsed: SwarmService = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, "web");
+        assert_eq!(parsed.replicas_running, 3);
+        assert_eq!(parsed.stack, Some("mystack".to_string()));
+    }
+
+    #[test]
+    fn test_swarm_task_roundtrip() {
+        let task = SwarmTask {
+            id: "task123".to_string(),
+            service_id: "svc123".to_string(),
+            node_id: "node1".to_string(),
+            status: "running".to_string(),
+            desired_state: "running".to_string(),
+            slot: 1,
+            error: None,
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&task).unwrap();
+        let parsed: SwarmTask = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.status, "running");
+        assert!(parsed.error.is_none());
+    }
+
+    #[test]
+    fn test_swarm_task_with_error() {
+        let task = SwarmTask {
+            id: "task456".to_string(),
+            service_id: "svc123".to_string(),
+            node_id: "node1".to_string(),
+            status: "failed".to_string(),
+            desired_state: "running".to_string(),
+            slot: 2,
+            error: Some("container exited with code 1".to_string()),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&task).unwrap();
+        let parsed: SwarmTask = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.error, Some("container exited with code 1".to_string()));
+    }
+}

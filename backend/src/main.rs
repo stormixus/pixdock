@@ -1,15 +1,17 @@
 mod api;
 mod auth;
 mod docker;
+mod headers;
 mod state;
 mod ws;
 
 use axum::{
     middleware,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use tracing_subscriber::EnvFilter;
 
@@ -78,7 +80,21 @@ async fn main() {
         .route("/api/services/{id}/scale", post(api::routes::scale_service))
         .route("/api/containers/{id}/action", post(api::routes::container_action))
         .route("/api/containers/{id}/logs", get(api::routes::get_container_logs))
+        .route("/api/images", get(api::routes::get_images))
+        .route("/api/images/{id}", delete(api::routes::delete_image))
         .layer(middleware::from_fn(auth::auth_middleware));
+
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::DELETE,
+        ])
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+        ]);
 
     let app = Router::new()
         // WebSocket (auth handled inside handler via query param)
@@ -89,6 +105,8 @@ async fn main() {
         .merge(protected)
         // Serve frontend static files
         .fallback_service(ServeDir::new("static"))
+        .layer(cors)
+        .layer(middleware::from_fn(headers::security_headers))
         .with_state(app_state);
 
     let addr = "0.0.0.0:8420";

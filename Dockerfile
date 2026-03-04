@@ -19,7 +19,7 @@ RUN cargo build --release
 
 # Stage 3: Runtime
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates wget
 COPY --from=backend-build /app/backend/target/release/pixdock /usr/local/bin/
 COPY --from=backend-build /app/backend/static /static
 

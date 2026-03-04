@@ -9,3 +9,9 @@ services:
       - RUST_LOG=pixdock=info
       - PIXDOCK_TOKEN=${PIXDOCK_TOKEN:-}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8420/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

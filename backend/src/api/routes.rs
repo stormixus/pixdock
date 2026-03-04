@@ -165,3 +165,111 @@ pub async fn container_action(
         }
     }
 }
+
+pub async fn get_images(
+    State(state): State<AppState>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    match state.docker.list_images().await {
+        Ok(images) => Ok(Json(json!(images))),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("Failed to list images: {}", e)})),
+        )),
+    }
+}
+
+pub async fn delete_image(
+    State(state): State<AppState>,
+    Path(image_id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    validate_docker_id(&image_id)?;
+    match state.docker.delete_image(&image_id).await {
+        Ok(()) => Ok(Json(json!({"status": "ok"}))),
+        Err(e) => {
+            tracing::error!("Image delete failed: {}", e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": format!("Failed to delete image: {}", e)})),
+            ))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ok(id: &str) -> bool {
+        validate_docker_id(id).is_ok()
+    }
+
+    fn err(id: &str) -> bool {
+        validate_docker_id(id).is_err()
+    }
+
+    // --- valid inputs ---
+
+    #[test]
+    fn test_valid_alphanumeric() {
+        assert!(ok("abc123"));
+    }
+
+    #[test]
+    fn test_valid_hyphen() {
+        assert!(ok("my-container"));
+    }
+
+    #[test]
+    fn test_valid_underscore_and_dot() {
+        assert!(ok("my_container.v2"));
+    }
+
+    #[test]
+    fn test_valid_single_char() {
+        assert!(ok("a"));
+    }
+
+    #[test]
+    fn test_valid_max_length() {
+        let s = "a".repeat(128);
+        assert!(ok(&s));
+    }
+
+    // --- invalid inputs ---
+
+    #[test]
+    fn test_invalid_empty() {
+        assert!(err(""));
+    }
+
+    #[test]
+    fn test_invalid_too_long() {
+        let s = "a".repeat(129);
+        assert!(err(&s));
+    }
+
+    #[test]
+    fn test_invalid_slash() {
+        assert!(err("abc/def"));
+    }
+
+    #[test]
+    fn test_invalid_space() {
+        assert!(err("abc def"));
+    }
+
+    #[test]
+    fn test_invalid_semicolon() {
+        assert!(err("abc;rm"));
+    }
+
+    #[test]
+    fn test_invalid_newline() {
+        assert!(err("test\ninjection"));
+    }
+
+    #[test]
+    fn test_invalid_angle_brackets() {
+        assert!(err("<script>"));
+    }
+}

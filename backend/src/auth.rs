@@ -4,6 +4,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use subtle::ConstantTimeEq;
 
 /// Bearer token authentication middleware.
 /// Reads the expected token from `PIXDOCK_TOKEN` env var.
@@ -23,7 +24,7 @@ pub async fn auth_middleware(request: Request, next: Next) -> Result<Response, S
     match auth_header {
         Some(header) if header.starts_with("Bearer ") => {
             let token = &header[7..];
-            if token == expected_token {
+            if token.as_bytes().ct_eq(expected_token.as_bytes()).into() {
                 Ok(next.run(request).await)
             } else {
                 Err(StatusCode::UNAUTHORIZED)

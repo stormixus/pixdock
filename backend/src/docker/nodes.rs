@@ -54,3 +54,31 @@ impl DockerClient {
         Ok(nodes)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_swarm_node_roundtrip() {
+        let node = SwarmNode {
+            id: "node123".to_string(),
+            hostname: "docker-node-1".to_string(),
+            role: "manager".to_string(),
+            status: "ready".to_string(),
+            availability: "active".to_string(),
+            engine_version: "24.0.7".to_string(),
+            ip: "192.168.1.10".to_string(),
+            os: "linux".to_string(),
+            arch: "x86_64".to_string(),
+            cpus: 4,
+            memory_bytes: 8_589_934_592,
+        };
+        let json = serde_json::to_string(&node).unwrap();
+        let parsed: SwarmNode = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.hostname, "docker-node-1");
+        assert_eq!(parsed.role, "manager");
+        assert_eq!(parsed.cpus, 4);
+        assert_eq!(parsed.memory_bytes, 8_589_934_592);
+    }
+}

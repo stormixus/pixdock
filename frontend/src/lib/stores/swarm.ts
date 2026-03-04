@@ -83,7 +83,7 @@ export const stats = derived(dashboardState, ($s) => ({
 }));
 
 // Init WebSocket connection
-export function initSwarmConnection() {
+export function initSwarmConnection(onAuthError?: () => void) {
   let prevStatus: ConnectionStatus = 'disconnected';
 
   return createWebSocket(
@@ -96,6 +96,7 @@ export function initSwarmConnection() {
           addToast('CONNECTION LOST', 'error');
         prevStatus = status;
       }
-    }
+    },
+    onAuthError
   );
 }

@@ -19,7 +19,7 @@ impl DockerClient {
     }
 
     /// Build a versioned Docker API path
-    fn versioned_path(path: &str) -> String {
+    pub(crate) fn versioned_path(path: &str) -> String {
         format!("{}{}", API_VERSION, path)
     }
 
@@ -117,6 +117,38 @@ impl DockerClient {
         serde_json::from_slice(&body_bytes)
             .map_err(|e| DockerError::Parse(e.to_string()))
     }
+    /// DELETE request to Docker API
+    pub async fn delete(&self, path: &str) -> Result<(), DockerError> {
+        let full_path = Self::versioned_path(path);
+        let uri: hyper::Uri = Uri::new(DOCKER_SOCKET, &full_path).into();
+
+        let req = Request::builder()
+            .method("DELETE")
+            .uri(uri)
+            .body(String::new())
+            .map_err(|e| DockerError::Connection(e.to_string()))?;
+
+        let response = self
+            .client
+            .request(req)
+            .await
+            .map_err(|e| DockerError::Connection(e.to_string()))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body_bytes = response
+                .into_body()
+                .collect()
+                .await
+                .map_err(|e| DockerError::Body(e.to_string()))?
+                .to_bytes();
+            let msg = String::from_utf8_lossy(&body_bytes).to_string();
+            return Err(DockerError::Api { status: status.as_u16(), message: msg });
+        }
+
+        Ok(())
+    }
+
     /// GET request returning raw bytes (for logs, etc.)
     pub async fn get_raw(&self, path: &str) -> Result<Vec<u8>, DockerError> {
         let full_path = Self::versioned_path(path);
@@ -155,4 +187,33 @@ pub enum DockerError {
     Api { status: u16, message: String },
     #[error("Parse error: {0}")]
     Parse(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_docker_error_display_connection() {
+        let err = DockerError::Connection("refused".to_string());
+        assert_eq!(format!("{}", err), "Connection error: refused");
+    }
+
+    #[test]
+    fn test_docker_error_display_api() {
+        let err = DockerError::Api { status: 404, message: "not found".to_string() };
+        assert_eq!(format!("{}", err), "API error 404: not found");
+    }
+
+    #[test]
+    fn test_docker_error_display_parse() {
+        let err = DockerError::Parse("invalid json".to_string());
+        assert_eq!(format!("{}", err), "Parse error: invalid json");
+    }
+
+    #[test]
+    fn test_versioned_path() {
+        let path = DockerClient::versioned_path("/containers/json");
+        assert_eq!(path, "/v1.43/containers/json");
+    }
 }
