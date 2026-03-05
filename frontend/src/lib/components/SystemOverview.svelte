@@ -5,11 +5,9 @@
 
   // ─── SPRITE PATHS (swap these when you have new assets) ───
   const SPRITES = {
-    room: '/assets/room_empty.png',
-    roomFallback: '/assets/server_room_bg.jpg',
-    rack: '/assets/new_server.png',      // server rack = compose project
-    desk: '/assets/node_desk.png',        // management console
-    worker: '/assets/new_desk.png',       // worker at active project (replace with walking sprite)
+    rack: '/assets/rack_nobg.png',        // server rack = compose project
+    desk: '/assets/desk_nobg.png',        // management console (3-monitor workstation)
+    worker: '/assets/worker_nobg.png',    // IT technician worker
     bookshelf: '/assets/bookshelf.png',   // docker images storage
     imageRack: '/assets/new_rack.png',    // alternative images display
   };
@@ -69,7 +67,7 @@
   // ─── STATE ───
   let frame = $state(0);
   let timer: ReturnType<typeof setInterval> | undefined;
-  let roomBgSrc = $state(SPRITES.room);
+  // Room background is CSS-only (dark gradient), no image needed
 
   // ─── DERIVED DATA ───
   const composeProjects = $derived.by(() => {
@@ -136,11 +134,6 @@
     if (timer) clearInterval(timer);
   });
 
-  function handleRoomBgError() {
-    if (roomBgSrc !== SPRITES.roomFallback) {
-      roomBgSrc = SPRITES.roomFallback;
-    }
-  }
 
   function projectLabel(name: string): string {
     return name === '_standalone' ? 'LOCAL' : name.toUpperCase();
@@ -157,8 +150,7 @@
   <!-- ═══ SCENE ═══ -->
   <div class="scene-shell pixel-border">
     <div class="scene-canvas" aria-label="SERVER ROOM OVERVIEW">
-      <!-- Background -->
-      <img class="room-bg" src={roomBgSrc} alt="" onerror={handleRoomBgError} />
+      <!-- Background is CSS gradient on .scene-canvas -->
 
       <!-- Zone HUD tags -->
       <div class="zone-tag zone-hosts">
@@ -344,7 +336,16 @@
     position: relative;
     aspect-ratio: 1376 / 768;
     width: 100%;
-    background: linear-gradient(180deg, rgba(8, 12, 32, 0.96), rgba(9, 10, 24, 0.99));
+    background:
+      /* ceiling lights glow */
+      radial-gradient(ellipse 30% 20% at 25% 0%, rgba(80, 180, 255, 0.08), transparent),
+      radial-gradient(ellipse 30% 20% at 50% 0%, rgba(80, 180, 255, 0.1), transparent),
+      radial-gradient(ellipse 30% 20% at 75% 0%, rgba(80, 180, 255, 0.08), transparent),
+      /* raised floor tile pattern */
+      repeating-linear-gradient(90deg, rgba(40, 60, 90, 0.15) 0px, rgba(40, 60, 90, 0.15) 1px, transparent 1px, transparent 48px),
+      repeating-linear-gradient(0deg, rgba(40, 60, 90, 0.12) 0px, rgba(40, 60, 90, 0.12) 1px, transparent 1px, transparent 48px),
+      /* base gradient - dark server room */
+      linear-gradient(180deg, #070b1a 0%, #0a0e1e 40%, #0d1225 100%);
   }
 
   .scene-canvas::after {
@@ -356,16 +357,6 @@
     background:
       linear-gradient(to bottom, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.25)),
       repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.07) 2px, rgba(0, 0, 0, 0.07) 4px);
-  }
-
-  .room-bg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    image-rendering: pixelated;
-    z-index: 1;
   }
 
   /* ═══ ZONE HUD TAGS ═══ */
