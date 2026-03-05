@@ -2,9 +2,51 @@
   import { projects, addToast } from '$lib/stores/swarm';
   import { containerAction } from '$lib/utils/ws';
   import LogViewer from './LogViewer.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
+  import ContainerDetail from './ContainerDetail.svelte';
+
+  type Container = (typeof $projects extends Map<string, (infer C)[]> ? C : never);
+  type FilterStatus = 'ALL' | 'RUNNING' | 'STOPPED' | 'OTHER';
 
   let actionLoading: string | null = $state(null);
   let viewingLogs: { id: string; name: string } | null = $state(null);
+  let inspecting: { id: string; name: string } | null = $state(null);
+  let showConfirm: { id: string; action: 'start' | 'stop' | 'restart'; name: string } | null = $state(null);
+
+  let searchTerm = $state('');
+  let filterStatus: FilterStatus = $state('ALL');
+
+  const filteredProjects = $derived.by(() => {
+    if (!searchTerm && filterStatus === 'ALL') {
+      return $projects;
+    }
+
+    const lowerSearch = searchTerm.toLowerCase();
+    const newProjects = new Map<string, Container[]>();
+
+    for (const [projectName, containers] of $projects.entries()) {
+      const filteredContainers = containers.filter(ctr => {
+        const matchesSearch = lowerSearch
+          ? ctr.name.toLowerCase().includes(lowerSearch) || ctr.image.toLowerCase().includes(lowerSearch)
+          : true;
+
+        const matchesStatus = filterStatus === 'ALL'
+          ? true
+          : filterStatus === 'RUNNING'
+          ? ctr.state === 'running'
+          : filterStatus === 'STOPPED'
+          ? ctr.state === 'exited' || ctr.state === 'dead'
+          : ctr.state !== 'running' && ctr.state !== 'exited' && ctr.state !== 'dead';
+        
+        return matchesSearch && matchesStatus;
+      });
+
+      if (filteredContainers.length > 0) {
+        newProjects.set(projectName, filteredContainers);
+      }
+    }
+    return newProjects;
+  });
 
   function stateColor(state: string): string {
     switch (state) {
@@ -41,10 +83,31 @@
     }
     actionLoading = null;
   }
+
+  function confirmAction(id: string, action: 'start' | 'stop' | 'restart', name: string) {
+    showConfirm = { id, action, name };
+  }
+
+  function doConfirm() {
+    if (showConfirm) {
+      handleAction(showConfirm.id, showConfirm.action);
+    }
+    showConfirm = null;
+  }
 </script>
 
+<div class="controls-panel pixel-panel">
+  <input type="text" placeholder="Search by name/image..." bind:value={searchTerm} class="search-input" />
+  <div class="filter-buttons">
+    <button class:active={filterStatus === 'ALL'} onclick={() => filterStatus = 'ALL'}>ALL</button>
+    <button class:active={filterStatus === 'RUNNING'} onclick={() => filterStatus = 'RUNNING'}>RUNNING</button>
+    <button class:active={filterStatus === 'STOPPED'} onclick={() => filterStatus = 'STOPPED'}>STOPPED</button>
+    <button class:active={filterStatus === 'OTHER'} onclick={() => filterStatus = 'OTHER'}>OTHER</button>
+  </div>
+</div>
+
 <div class="projects">
-  {#each [...$projects.entries()] as [projectName, ctrs]}
+  {#each [...filteredProjects.entries()] as [projectName, ctrs]}
     <div class="project-group pixel-panel">
       <div class="project-header">
         <span class="project-name">
@@ -57,7 +120,7 @@
 
       <div class="container-table">
         {#each ctrs as ctr}
-          <div class="container-row" class:container-stopped={ctr.state !== 'running'}>
+          <div class="container-row" class:container-stopped={ctr.state !== 'running'} onclick={() => inspecting = {id: ctr.id, name: ctr.name}}>
             <div class="ctr-status">
               <span
                 class="led {stateColor(ctr.state)}"
@@ -79,7 +142,7 @@
               {/each}
             </div>
 
-            <div class="ctr-actions">
+            <div class="ctr-actions" onclick={(e: MouseEvent) => e.stopPropagation()}>
               <button
                 class="action-btn action-logs"
                 onclick={() => viewingLogs = { id: ctr.id, name: ctr.name }}
@@ -89,13 +152,13 @@
                 <button
                   class="action-btn action-stop"
                   disabled={actionLoading === ctr.id}
-                  onclick={() => handleAction(ctr.id, 'stop')}
+                  onclick={() => confirmAction(ctr.id, 'stop', ctr.name)}
                   title="Stop"
                 >&#9632;</button>
                 <button
                   class="action-btn action-restart"
                   disabled={actionLoading === ctr.id}
-                  onclick={() => handleAction(ctr.id, 'restart')}
+                  onclick={() => confirmAction(ctr.id, 'restart', ctr.name)}
                   title="Restart"
                 >&#8635;</button>
               {:else}
@@ -122,11 +185,81 @@
   />
 {/if}
 
+{#if inspecting}
+  <ContainerDetail
+    containerId={inspecting.id}
+    containerName={inspecting.name}
+    onClose={() => inspecting = null}
+  />
+{/if}
+
+{#if showConfirm}
+  <ConfirmDialog
+    message={`Are you sure you want to ${showConfirm.action} ${showConfirm.name}?`}
+    confirmLabel={showConfirm.action.toUpperCase()}
+    onConfirm={doConfirm}
+    onCancel={() => showConfirm = null}
+  />
+{/if}
+
 <style>
+  .controls-panel {
+    padding: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .search-input {
+    flex-grow: 1;
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: 6px 8px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--blue);
+  }
+
+  .filter-buttons {
+    display: flex;
+    gap: 4px;
+  }
+
+  .filter-buttons button {
+    background: var(--bg-panel);
+    border: 2px solid var(--border);
+    color: var(--text-dim);
+    font-size: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+  }
+  
+  .filter-buttons button.active {
+    background: var(--blue);
+    color: var(--bg-dark);
+    border-color: var(--blue);
+  }
+
+  .filter-buttons button:hover:not(.active) {
+    border-color: var(--text);
+    color: var(--text);
+  }
+
   .projects {
     display: flex;
     flex-direction: column;
     gap: 8px;
+  }
+  
+  .container-row {
+    cursor: pointer;
   }
 
   .project-group {

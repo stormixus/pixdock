@@ -14,6 +14,21 @@
   }
 
   let { onlogout }: Props = $props();
+  
+  let crtEnabled = $state(true);
+
+  $effect(() => {
+    const saved = localStorage.getItem('pixdock_crt_effect');
+    crtEnabled = saved !== 'false';
+
+    const unsub = $effect.root(() => {
+      $effect(() => {
+        localStorage.setItem('pixdock_crt_effect', String(crtEnabled));
+      });
+    });
+    return unsub;
+  });
+
 
   function handleLogout() {
     logout();
@@ -31,6 +46,10 @@
         PIX<span class="accent">DOCK</span>
       </h1>
       <div class="header-stats">
+        <button class="crt-toggle" onclick={() => crtEnabled = !crtEnabled}>
+          CRT: {crtEnabled ? 'ON' : 'OFF'}
+        </button>
+
         <span class="stat">
           <span class="led" class:led-green={$connectionStatus === 'connected'} class:led-red={$connectionStatus === 'disconnected'} class:led-yellow={$connectionStatus === 'connecting'} class:blink={$connectionStatus === 'connecting'}></span>
           {$connectionStatus.toUpperCase()}
@@ -86,7 +105,9 @@
     <PixelStatusBar />
   </div>
 
-  <div class="scanlines"></div>
+  {#if crtEnabled}
+    <div class="scanlines"></div>
+  {/if}
 </div>
 
 <Toast />
@@ -151,8 +172,25 @@
 
   .header-stats {
     display: flex;
-    gap: 24px;
+    gap: 16px;
     align-items: center;
+  }
+
+  .crt-toggle {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    background: transparent;
+    color: var(--purple);
+    border: 1px solid var(--purple);
+    padding: 3px 8px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    image-rendering: pixelated;
+  }
+
+  .crt-toggle:hover {
+    background: var(--purple);
+    color: var(--bg-dark);
   }
 
   .stat {

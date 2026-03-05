@@ -3,11 +3,13 @@
   import { fetchImages, deleteImage } from '$lib/utils/ws';
   import type { DockerImage } from '$lib/utils/ws';
   import { addToast } from '$lib/stores/swarm';
+  import ConfirmDialog from './ConfirmDialog.svelte';
 
   let images: DockerImage[] = $state([]);
   let loading = $state(true);
   let error: string | null = $state(null);
   let deletingId: string | null = $state(null);
+  let showConfirm: DockerImage | null = $state(null);
 
   function formatSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -45,10 +47,11 @@
     loading = false;
   }
 
-  async function handleDelete(img: DockerImage) {
+  async function doDelete() {
+    if (!showConfirm) return;
+    const img = showConfirm;
     const tag = primaryTag(img.repo_tags);
-    const confirmed = window.confirm(`Delete image ${tag} (${img.id})?\n\nThis cannot be undone.`);
-    if (!confirmed) return;
+    showConfirm = null;
 
     deletingId = img.id;
     try {
@@ -128,7 +131,7 @@
             <button
               class="action-btn action-delete"
               disabled={deletingId === img.id}
-              onclick={() => handleDelete(img)}
+              onclick={() => showConfirm = img}
               title="Delete image"
             >&#10005;</button>
           </div>
@@ -137,6 +140,15 @@
     </div>
   {/if}
 </div>
+
+{#if showConfirm}
+  <ConfirmDialog
+    message={`Delete image ${primaryTag(showConfirm.repo_tags)}?`}
+    confirmLabel="DELETE"
+    onConfirm={doDelete}
+    onCancel={() => showConfirm = null}
+  />
+{/if}
 
 <style>
   .image-panel {

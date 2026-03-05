@@ -20,6 +20,7 @@ pub struct DashboardState {
     pub nodes: Vec<SwarmNode>,
     pub services: Vec<SwarmService>,
     pub containers: Vec<Container>,
+    pub error: Option<String>,
     pub timestamp: String,
 }
 
@@ -34,15 +35,16 @@ pub struct Broadcaster {
 }
 
 impl Broadcaster {
-    pub fn new(docker: Arc<DockerClient>) -> Arc<Self> {
-        let (sender, _) = broadcast::channel(16);
+    pub fn new(docker: Arc<DockerClient>, poll_interval_secs: u64) -> Arc<Self> {
+        let (sender, _) = broadcast::channel(4);
         let broadcaster = Arc::new(Self { sender });
 
         let docker_clone = docker;
         let sender_clone = broadcaster.sender.clone();
         tokio::spawn(async move {
             let is_swarm = docker_clone.is_swarm_mode().await;
-            let mut tick = tokio::time::interval(tokio::time::Duration::from_secs(3));
+            let interval_secs = poll_interval_secs.max(1);
+            let mut tick = tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
 
             loop {
                 tick.tick().await;
@@ -121,21 +123,49 @@ async fn handle_socket(socket: WebSocket, state: AppState) {
 }
 
 async fn build_state_json(docker: &DockerClient, is_swarm: bool) -> Option<String> {
-    let containers = docker.list_containers().await.unwrap_or_default();
+    let mut errors = Vec::new();
+    let containers = match docker.list_containers().await {
+        Ok(value) => value,
+        Err(err) => {
+            errors.push(format!("containers: {}", err));
+            Vec::new()
+        }
+    };
 
     let (nodes, services) = if is_swarm {
-        let n = docker.list_nodes().await.unwrap_or_default();
-        let s = docker.list_services().await.unwrap_or_default();
+        let n = match docker.list_nodes().await {
+            Ok(value) => value,
+            Err(err) => {
+                errors.push(format!("nodes: {}", err));
+                Vec::new()
+            }
+        };
+        let s = match docker.list_services().await {
+            Ok(value) => value,
+            Err(err) => {
+                errors.push(format!("services: {}", err));
+                Vec::new()
+            }
+        };
         (n, s)
     } else {
         (vec![], vec![])
     };
 
     let state = DashboardState {
-        mode: if is_swarm { "swarm".into() } else { "standalone".into() },
+        mode: if is_swarm {
+            "swarm".into()
+        } else {
+            "standalone".into()
+        },
         nodes,
         services,
         containers,
+        error: if errors.is_empty() {
+            None
+        } else {
+            Some(errors.join("; "))
+        },
         timestamp: chrono::Utc::now().to_rfc3339(),
     };
 

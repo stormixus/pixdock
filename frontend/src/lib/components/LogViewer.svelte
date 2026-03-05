@@ -1,5 +1,6 @@
 <script lang="ts">
   import { addToast } from '$lib/stores/swarm';
+  import { getAuthToken } from '$lib/utils/ws';
 
   interface Props {
     containerId: string;
@@ -12,43 +13,47 @@
   let lines: string[] = $state([]);
   let loading = $state(true);
   let searchQuery = $state('');
-  let autoScroll = $state(true);
+  let followMode = $state(true);
   let logContainer: HTMLDivElement | undefined = $state();
+  let eventSource: EventSource | null = null;
 
   const filteredLines = $derived(
     searchQuery
       ? lines.filter((l) => l.toLowerCase().includes(searchQuery.toLowerCase()))
       : lines
   );
-
-  function getAuthHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {};
-    const token = localStorage.getItem('pixdock_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
-  }
-
-  async function fetchLogs() {
+  
+  function connectLogStream() {
     loading = true;
-    try {
-      const res = await fetch(`/api/containers/${containerId}/logs?tail=500&timestamps=true`, {
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      lines = data.lines || [];
-    } catch {
-      addToast('FAILED TO FETCH LOGS', 'error');
-      lines = ['Error: Could not load container logs.'];
-    }
-    loading = false;
-    scrollToBottom();
+    lines = [];
+    
+    const token = getAuthToken();
+    const url = `/api/containers/${containerId}/logs/stream?token=${encodeURIComponent(token || '')}`;
+    
+    eventSource = new EventSource(url);
+
+    eventSource.onopen = () => {
+      loading = false;
+    };
+
+    eventSource.onmessage = (event) => {
+      lines.push(event.data);
+      lines = lines; // force update
+      if (followMode) {
+        scrollToBottom();
+      }
+    };
+
+    eventSource.onerror = () => {
+      addToast('LOG STREAM ERROR', 'error');
+      lines.push('--- LOG STREAM DISCONNECTED ---');
+      eventSource?.close();
+      loading = false;
+    };
   }
 
   function scrollToBottom() {
-    if (autoScroll && logContainer) {
+    if (followMode && logContainer) {
       requestAnimationFrame(() => {
         if (logContainer) {
           logContainer.scrollTop = logContainer.scrollHeight;
@@ -62,10 +67,17 @@
   }
 
   $effect(() => {
-    fetchLogs();
-    // Auto-refresh every 5 seconds
-    const interval = setInterval(fetchLogs, 5000);
-    return () => clearInterval(interval);
+    connectLogStream();
+    return () => {
+      eventSource?.close();
+      eventSource = null;
+    };
+  });
+
+  $effect(() => {
+    if (filteredLines.length > 0 && followMode) {
+      scrollToBottom();
+    }
   });
 </script>
 
@@ -86,20 +98,26 @@
           bind:value={searchQuery}
         />
         <label class="auto-scroll-toggle">
-          <input type="checkbox" bind:checked={autoScroll} />
-          AUTO&#8595;
+          <input type="checkbox" bind:checked={followMode} />
+          FOLLOW
         </label>
-        <button class="log-refresh" onclick={fetchLogs} title="Refresh">&#8635;</button>
         <button class="log-close" onclick={onClose} title="Close (ESC)">&#10005;</button>
       </div>
     </div>
 
-    <div class="log-body" bind:this={logContainer}>
+    <div class="log-body" bind:this={logContainer} onscroll={() => {
+      if (logContainer) {
+        const isScrolledToBottom = logContainer.scrollHeight - logContainer.clientHeight <= logContainer.scrollTop + 1;
+        if (!isScrolledToBottom) {
+          followMode = false;
+        }
+      }
+    }}>
       {#if loading && lines.length === 0}
-        <div class="log-loading">LOADING LOGS...</div>
+        <div class="log-loading">CONNECTING LOG STREAM...</div>
       {:else if filteredLines.length === 0}
         <div class="log-empty">
-          {searchQuery ? 'NO MATCHING LINES' : 'NO LOGS AVAILABLE'}
+          {searchQuery ? 'NO MATCHING LINES' : 'NO LOGS RECEIVED YET...'}
         </div>
       {:else}
         {#each filteredLines as line, i}
@@ -203,7 +221,6 @@
     accent-color: var(--green);
   }
 
-  .log-refresh,
   .log-close {
     width: 22px;
     height: 22px;
@@ -216,11 +233,6 @@
     align-items: center;
     justify-content: center;
     font-family: 'Press Start 2P', monospace;
-  }
-
-  .log-refresh:hover {
-    border-color: var(--blue);
-    color: var(--blue);
   }
 
   .log-close:hover {

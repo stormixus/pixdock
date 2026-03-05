@@ -216,3 +216,33 @@ export async function deleteImage(imageId: string): Promise<void> {
   });
   if (!res.ok) throw new Error(`Failed to delete image: ${res.status}`);
 }
+
+export interface ContainerInspectInfo {
+  id: string;
+  name: string;
+  config: {
+    env: string[];
+    image: string;
+  };
+  mounts: {
+    type: string;
+    source: string;
+    destination: string;
+    mode: string;
+  }[];
+  network_settings: {
+    ports: Record<string, { host_ip: string; host_port: string }[] | null>;
+    networks: Record<string, {
+      ip_address: string;
+      gateway: string;
+    }>;
+  };
+}
+
+export async function fetchContainerInspect(containerId: string): Promise<ContainerInspectInfo> {
+  const res = await fetch(`/api/containers/${containerId}/inspect`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to inspect container: ${res.status}`);
+  return res.json();
+}

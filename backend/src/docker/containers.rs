@@ -1,4 +1,5 @@
 use super::client::DockerClient;
+use hyper::body::Incoming;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,12 +64,7 @@ impl DockerClient {
                     .map(|s| s.to_string());
 
                 Container {
-                    id: c["Id"]
-                        .as_str()
-                        .unwrap_or("")
-                        .chars()
-                        .take(12)
-                        .collect(),
+                    id: c["Id"].as_str().unwrap_or("").chars().take(12).collect(),
                     name,
                     image: c["Image"].as_str().unwrap_or("").to_string(),
                     state: c["State"].as_str().unwrap_or("unknown").to_string(),
@@ -102,7 +98,12 @@ impl DockerClient {
     }
 
     /// Get container logs (recent lines)
-    pub async fn get_logs(&self, id: &str, tail: u32, timestamps: bool) -> Result<Vec<String>, super::client::DockerError> {
+    pub async fn get_logs(
+        &self,
+        id: &str,
+        tail: u32,
+        timestamps: bool,
+    ) -> Result<Vec<String>, super::client::DockerError> {
         let path = format!(
             "/containers/{}/logs?stdout=true&stderr=true&tail={}&timestamps={}",
             id, tail, timestamps
@@ -116,7 +117,8 @@ impl DockerClient {
 
         while pos + 8 <= raw.len() {
             // Skip stream type byte and 3 padding bytes
-            let size = u32::from_be_bytes([raw[pos + 4], raw[pos + 5], raw[pos + 6], raw[pos + 7]]) as usize;
+            let size = u32::from_be_bytes([raw[pos + 4], raw[pos + 5], raw[pos + 6], raw[pos + 7]])
+                as usize;
             pos += 8;
 
             if pos + size > raw.len() {
@@ -134,6 +136,29 @@ impl DockerClient {
 
         Ok(lines)
     }
+
+    /// Inspect a container via Docker API.
+    pub async fn inspect_container(
+        &self,
+        id: &str,
+    ) -> Result<serde_json::Value, super::client::DockerError> {
+        let path = format!("/containers/{}/json", id);
+        self.get(&path).await
+    }
+
+    /// Stream container logs using Docker's follow API.
+    pub async fn stream_logs(
+        &self,
+        id: &str,
+        tail: u32,
+        timestamps: bool,
+    ) -> Result<Incoming, super::client::DockerError> {
+        let path = format!(
+            "/containers/{}/logs?stdout=true&stderr=true&follow=true&tail={}&timestamps={}",
+            id, tail, timestamps
+        );
+        self.get_stream(&path).await
+    }
 }
 
 #[cfg(test)]
@@ -144,12 +169,8 @@ mod tests {
         let mut lines = Vec::new();
         let mut pos = 0;
         while pos + 8 <= raw.len() {
-            let size = u32::from_be_bytes([
-                raw[pos + 4],
-                raw[pos + 5],
-                raw[pos + 6],
-                raw[pos + 7],
-            ]) as usize;
+            let size = u32::from_be_bytes([raw[pos + 4], raw[pos + 5], raw[pos + 6], raw[pos + 7]])
+                as usize;
             pos += 8;
             if pos + size > raw.len() {
                 break;
