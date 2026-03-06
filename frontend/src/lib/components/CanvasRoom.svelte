@@ -43,8 +43,8 @@
     imgWall.onload = onLoad;
     
     imgWhale.src = '/assets/agent_whale.png';
-    imgDesk.src = '/assets/new_desk.png';
-    imgBookshelf.src = '/assets/new_rack.png';
+    imgDesk.src = '/assets/node_desk.png';
+    imgBookshelf.src = '/assets/bookshelf.png';
     imgServer.src = '/assets/new_server.png';
     imgWall.src = '/assets/brick_wall.png';
 
@@ -220,7 +220,7 @@
     }
 
     const w = 50; // Logical Whale Width
-    const h = 50; // Logical Whale Height
+    const h = (imgWhale.height / imgWhale.width) * w || 50; // Maintain aspect ratio
     
     const bodyColor = getAgentColor(agent.state);
     
@@ -302,7 +302,8 @@
                 ctx.translate(Math.floor(pos.x), Math.floor(pos.y));
 
                 // Wall Sprite (Left Wall faces South-East, original image orientation)
-                ctx.drawImage(imgWall, -wallW/2, -wallH + T_H/2 + 10, wallW, wallH);
+                const h = (imgWall.height / imgWall.width) * wallW || wallH;
+                ctx.drawImage(imgWall, -wallW/2, -h + T_H/2 + 10, wallW, h);
                 ctx.restore();
             }
         });
@@ -322,7 +323,8 @@
 
                 // Right Wall faces South-West, flip horizontally
                 ctx.scale(-1, 1);
-                ctx.drawImage(imgWall, -wallW/2, -wallH + T_H/2 + 10, wallW, wallH);
+                const h = (imgWall.height / imgWall.width) * wallW || wallH;
+                ctx.drawImage(imgWall, -wallW/2, -h + T_H/2 + 10, wallW, h);
                 ctx.restore();
             }
         });
@@ -348,7 +350,8 @@
                   // Big Server Unit
                   ctx.globalAlpha = 0.5; // Dimmed because it's behind the wall, or we keep it lit. Let's keep it lit.
                   ctx.globalAlpha = 1.0;
-                  ctx.drawImage(imgServer, -serverW/2, -serverH + T_H, serverW, serverH);
+                  const h = (imgServer.height / imgServer.width) * serverW || serverH;
+                  ctx.drawImage(imgServer, -serverW/2, -h + T_H, serverW, h);
                   
                   ctx.restore();
               }
@@ -388,7 +391,8 @@
                 ctx.fill();
 
                 // Desk Sprite
-                ctx.drawImage(imgDesk, -deskW/2 + 5, -deskH + T_H/2 + 10, deskW, deskH);
+                const h = (imgDesk.height / imgDesk.width) * deskW || deskH;
+                ctx.drawImage(imgDesk, -deskW/2 + 5, -h + T_H/2 + 10, deskW, h);
 
                 // Draw Server details label below the desk
                 ctx.fillStyle = COLORS.eye;
@@ -420,8 +424,8 @@
       }
     }
 
-    // High Res Images look better when smoothed down
-    ctx.imageSmoothingEnabled = true;
+    // High Res Images look better when smoothed down, but pixel art needs it false
+    ctx.imageSmoothingEnabled = false;
 
     // Background and Floors
     drawFloor(ctx, canvas.width, canvas.height);

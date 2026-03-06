@@ -2,41 +2,78 @@
   import { onDestroy, onMount } from 'svelte';
   import { containers, dockerMode, nodes, services } from '$lib/stores/swarm';
   import type { Container } from '$lib/utils/ws';
+  import type { SwarmNode, SwarmService } from '$lib/utils/ws';
 
-  // ─── SPRITE PATHS (swap these when you have new assets) ───
+  // ─── DEMO DATA (shown when no Docker connection / empty) ───
+  const DEMO_CONTAINERS: Container[] = [
+    { id: 'd1', name: 'webstack-nginx-1', image: 'nginx:alpine', state: 'running', status: 'Up 2 days', created: 0, ports: [{ private_port: 80, public_port: 8080, port_type: 'tcp' }], project: 'webstack' },
+    { id: 'd2', name: 'webstack-app-1', image: 'node:20-alpine', state: 'running', status: 'Up 2 days', created: 0, ports: [{ private_port: 3000, public_port: 3000, port_type: 'tcp' }], project: 'webstack' },
+    { id: 'd3', name: 'webstack-db-1', image: 'postgres:16', state: 'running', status: 'Up 2 days', created: 0, ports: [], project: 'webstack' },
+    { id: 'd4', name: 'api-gateway-kong-1', image: 'kong:3.4', state: 'running', status: 'Up 1 day', created: 0, ports: [{ private_port: 8000, public_port: 8000, port_type: 'tcp' }], project: 'api-gateway' },
+    { id: 'd5', name: 'api-gateway-kong-2', image: 'kong:3.4', state: 'running', status: 'Up 1 day', created: 0, ports: [], project: 'api-gateway' },
+    { id: 'd6', name: 'api-gateway-redis-1', image: 'redis:7-alpine', state: 'running', status: 'Up 1 day', created: 0, ports: [], project: 'api-gateway' },
+    { id: 'd7', name: 'monitoring-prometheus-1', image: 'prom/prometheus:latest', state: 'running', status: 'Up 5 hours', created: 0, ports: [{ private_port: 9090, public_port: 9090, port_type: 'tcp' }], project: 'monitoring' },
+    { id: 'd8', name: 'monitoring-grafana-1', image: 'grafana/grafana:latest', state: 'running', status: 'Up 5 hours', created: 0, ports: [{ private_port: 3000, public_port: 3001, port_type: 'tcp' }], project: 'monitoring' },
+    { id: 'd9', name: 'monitoring-node-exporter', image: 'prom/node-exporter', state: 'exited', status: 'Exited (0)', created: 0, ports: [], project: 'monitoring' },
+    { id: 'd10', name: 'redis-master', image: 'redis:7-alpine', state: 'running', status: 'Up 3 days', created: 0, ports: [{ private_port: 6379, public_port: 6379, port_type: 'tcp' }], project: 'redis-cluster' },
+    { id: 'd11', name: 'redis-replica-1', image: 'redis:7-alpine', state: 'running', status: 'Up 3 days', created: 0, ports: [], project: 'redis-cluster' },
+    { id: 'd12', name: 'redis-replica-2', image: 'redis:7-alpine', state: 'restarting', status: 'Restarting', created: 0, ports: [], project: 'redis-cluster' },
+    { id: 'd13', name: 'frontend-next-1', image: 'node:20-alpine', state: 'running', status: 'Up 1 hour', created: 0, ports: [{ private_port: 3000, public_port: 3002, port_type: 'tcp' }], project: 'frontend' },
+    { id: 'd14', name: 'frontend-cache-1', image: 'memcached:alpine', state: 'exited', status: 'Exited (0)', created: 0, ports: [], project: 'frontend' },
+  ];
+
+  const DEMO_NODES: SwarmNode[] = [
+    { id: 'n1', hostname: 'manager-01', role: 'manager', status: 'ready', availability: 'active', engine_version: '24.0', ip: '192.168.1.10', os: 'linux', arch: 'amd64', cpus: 8, memory_bytes: 17179869184 },
+    { id: 'n2', hostname: 'worker-01', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0', ip: '192.168.1.11', os: 'linux', arch: 'amd64', cpus: 4, memory_bytes: 8589934592 },
+    { id: 'n3', hostname: 'worker-02', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0', ip: '192.168.1.12', os: 'linux', arch: 'amd64', cpus: 4, memory_bytes: 8589934592 },
+  ];
+
+  const DEMO_SERVICES: SwarmService[] = [
+    { id: 's1', name: 'web_nginx', image: 'nginx:alpine', replicas_running: 2, replicas_desired: 2, ports: [{ published: 80, target: 80, protocol: 'tcp' }], updated_at: '', stack: 'web' },
+    { id: 's2', name: 'api_kong', image: 'kong:3.4', replicas_running: 3, replicas_desired: 3, ports: [], updated_at: '', stack: 'api' },
+  ];
+
+  // Use demo data when no real data (Docker disconnected / empty)
+  const useDemo = $derived($containers.length === 0);
+  const displayContainers = $derived(useDemo ? DEMO_CONTAINERS : $containers);
+  const displayNodes = $derived(useDemo ? DEMO_NODES : $nodes);
+  const displayServices = $derived(useDemo ? DEMO_SERVICES : $services);
+  // Demo shows swarm mode with multiple nodes; real data uses actual mode
+  const displayMode = $derived(useDemo ? 'swarm' as const : $dockerMode);
+
+  // ─── SPRITE PATHS (use RGBA/transparent assets only) ───
   const SPRITES = {
-    rack: '/assets/rack_nobg.png',        // server rack = compose project
-    desk: '/assets/desk_nobg.png',        // management console (3-monitor workstation)
-    worker: '/assets/worker_nobg.png',    // IT technician worker
-    bookshelf: '/assets/bookshelf.png',   // docker images storage
-    imageRack: '/assets/new_rack.png',    // alternative images display
+    rack: '/assets/system_overview_rack.png',
+    desk: '/assets/system_overview_desk.png',
+    worker: '/assets/system_overview_worker.png',
+    bookshelf: '/assets/system_overview_storage.png',
+    imageRack: '/assets/system_overview_storage.png',
   };
 
-  // ─── LAYOUT CONFIG (tune positions here) ───
+  const BG_IMAGE = '/assets/system_overview_bg_v2.png';
+
+  // ─── LAYOUT (2x rack size, spread for room_empty_bg) ───
   const LAYOUT = {
-    // Rack positions along the back wall (isometric, % based)
-    // Up to 6 racks, arranged left-to-right with isometric offset
+    // Racks along back wall (5 slots, wider spacing)
     rackSlots: [
-      { x: 8,  y: 22 },
-      { x: 22, y: 22 },
-      { x: 36, y: 22 },
-      { x: 50, y: 22 },
-      { x: 64, y: 22 },
-      { x: 78, y: 22 },
+      { x: 12,  y: 24 },
+      { x: 30,  y: 22 },
+      { x: 50,  y: 26 },
+      { x: 70,  y: 24 },
+      { x: 88,  y: 22 },
     ],
-    // Worker positions (in front of each rack)
+    // Workers on floor, in front of each rack
     workerSlots: [
-      { x: 10, y: 55 },
-      { x: 24, y: 55 },
-      { x: 38, y: 55 },
-      { x: 52, y: 55 },
-      { x: 66, y: 55 },
-      { x: 80, y: 55 },
+      { x: 12, y: 52 },
+      { x: 30, y: 50 },
+      { x: 50, y: 54 },
+      { x: 70, y: 52 },
+      { x: 88, y: 50 },
     ],
-    // Fixed furniture
-    console: { x: 4, y: 70 },      // node_desk management console
-    bookshelf: { x: 85, y: 25 },   // docker images bookshelf
-    // Max containers shown as LED slots per rack
+    // Console: front-left
+    console: { x: 8, y: 85 },
+    // Bookshelf: back-right
+    bookshelf: { x: 90, y: 28 },
     maxSlotsPerRack: 12,
   };
 
@@ -73,7 +110,7 @@
   const composeProjects = $derived.by(() => {
     const projectMap = new Map<string, Container[]>();
 
-    for (const ctr of $containers) {
+    for (const ctr of displayContainers) {
       const project = ctr.project?.trim() || '_standalone';
       if (!projectMap.has(project)) projectMap.set(project, []);
       projectMap.get(project)!.push(ctr);
@@ -117,12 +154,12 @@
     }))
   );
 
-  const runningCount = $derived($containers.filter(c => c.state === 'running').length);
-  const totalCount = $derived($containers.length);
-  const hostCount = $derived($dockerMode === 'swarm' && $nodes.length > 0 ? $nodes.length : 1);
+  const runningCount = $derived(displayContainers.filter(c => c.state === 'running').length);
+  const totalCount = $derived(displayContainers.length);
+  const hostCount = $derived(displayMode === 'swarm' && displayNodes.length > 0 ? displayNodes.length : 1);
   const uniqueImageCount = $derived(new Set([
-    ...$services.map(s => s.image),
-    ...$containers.map(c => c.image),
+    ...displayServices.map(s => s.image),
+    ...displayContainers.map(c => c.image),
   ]).size);
 
   // ─── ANIMATION ───
@@ -149,8 +186,8 @@
 <div class="overview-shell pixel-panel">
   <!-- ═══ SCENE ═══ -->
   <div class="scene-shell pixel-border">
-    <div class="scene-canvas" aria-label="SERVER ROOM OVERVIEW">
-      <!-- Background is CSS gradient on .scene-canvas -->
+    <div class="scene-canvas" aria-label="SERVER ROOM OVERVIEW" style="--bg-image: url('{BG_IMAGE}')">
+      <!-- Background: isometric server room (room_empty.png) -->
 
       <!-- Zone HUD tags -->
       <div class="zone-tag zone-hosts">
@@ -178,13 +215,13 @@
         <div class="furniture-label">IMAGES ({uniqueImageCount})</div>
       </div>
 
-      <!-- Server Racks (dynamic per project) -->
-      {#each racks as rack}
+      <!-- Server Racks (dynamic per project, isometric depth by y) -->
+      {#each racks as rack, i}
         <div
           class="rack"
           class:rack-active={rack.project.isActive}
           class:rack-inactive={!rack.project.isActive}
-          style="left:{rack.x}%;top:{rack.y}%;"
+          style="left:{rack.x}%;top:{rack.y}%;z-index:{Math.round(rack.y) + 5};"
         >
           <img class="rack-img" src={SPRITES.rack} alt="" />
 
@@ -210,12 +247,12 @@
         </div>
       {/each}
 
-      <!-- Workers at active projects -->
+      <!-- Workers at active projects (isometric depth) -->
       {#each workers as worker}
         {#if worker.active}
           <div
             class="worker"
-            style="left:{worker.x}%;top:{worker.y}%;"
+            style="left:{worker.x}%;top:{worker.y}%;z-index:{Math.round(worker.y) + 10};"
           >
             <img
               class="worker-img"
@@ -227,8 +264,8 @@
         {/if}
       {/each}
 
-      <!-- Empty state -->
-      {#if composeProjects.length === 0}
+      <!-- Empty state (only when no demo data either) -->
+      {#if composeProjects.length === 0 && !useDemo}
         <div class="empty-room">
           <span class="blink-text">WAITING FOR CONTAINERS...</span>
         </div>
@@ -267,10 +304,10 @@
         <strong>{runningCount}/{totalCount}</strong>
       </div>
       <div class="list">
-        {#if $containers.length === 0}
+        {#if displayContainers.length === 0}
           <div class="empty-state">NO CONTAINER DATA</div>
         {:else}
-          {#each $containers as ctr}
+          {#each displayContainers as ctr}
             <div class="list-row" class:inactive={ctr.state !== 'running'}>
               <span class="led" class:led-green={ctr.state === 'running'} class:led-red={ctr.state === 'exited' || ctr.state === 'dead'} class:led-yellow={ctr.state !== 'running' && ctr.state !== 'exited' && ctr.state !== 'dead'}></span>
               <span class="row-main">{ctr.name.length > 20 ? ctr.name.slice(0, 20) + '...' : ctr.name}</span>
@@ -286,11 +323,11 @@
       <h3 class="card-title">HOST INFO</h3>
       <div class="meta-row">
         <span>MODE</span>
-        <strong>{$dockerMode.toUpperCase()}</strong>
+        <strong>{displayMode.toUpperCase()}{#if useDemo} (DEMO){/if}</strong>
       </div>
       <div class="list">
-        {#if $dockerMode === 'swarm'}
-          {#each $nodes as node}
+        {#if displayMode === 'swarm'}
+          {#each displayNodes as node}
             <div class="list-row">
               <span class="led" class:led-green={node.status === 'ready'} class:led-red={node.status !== 'ready'}></span>
               <span class="row-main">{node.hostname}</span>
@@ -337,15 +374,9 @@
     aspect-ratio: 1376 / 768;
     width: 100%;
     background:
-      /* ceiling lights glow */
-      radial-gradient(ellipse 30% 20% at 25% 0%, rgba(80, 180, 255, 0.08), transparent),
-      radial-gradient(ellipse 30% 20% at 50% 0%, rgba(80, 180, 255, 0.1), transparent),
-      radial-gradient(ellipse 30% 20% at 75% 0%, rgba(80, 180, 255, 0.08), transparent),
-      /* raised floor tile pattern */
-      repeating-linear-gradient(90deg, rgba(40, 60, 90, 0.15) 0px, rgba(40, 60, 90, 0.15) 1px, transparent 1px, transparent 48px),
-      repeating-linear-gradient(0deg, rgba(40, 60, 90, 0.12) 0px, rgba(40, 60, 90, 0.12) 1px, transparent 1px, transparent 48px),
-      /* base gradient - dark server room */
-      linear-gradient(180deg, #070b1a 0%, #0a0e1e 40%, #0d1225 100%);
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.3)),
+      var(--bg-image, url('/assets/room_empty_bg.png')) center center / cover no-repeat;
+    background-color: #0a0e1a;
   }
 
   .scene-canvas::after {
@@ -353,10 +384,10 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    z-index: 20;
+    z-index: 2;
     background:
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.25)),
-      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.07) 2px, rgba(0, 0, 0, 0.07) 4px);
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.2)),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.04) 2px, rgba(0, 0, 0, 0.04) 4px);
   }
 
   /* ═══ ZONE HUD TAGS ═══ */
@@ -387,9 +418,12 @@
   }
 
   .furniture img {
-    width: clamp(50px, 8vw, 100px);
+    width: clamp(90px, 14vw, 180px);
+    height: auto;
+    display: block;
     image-rendering: pixelated;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+    background: transparent;
   }
 
   .furniture-label {
@@ -400,22 +434,24 @@
     letter-spacing: 1px;
   }
 
-  .console { transform: translate(-50%, -50%); }
-  .bookshelf { transform: translate(-50%, -50%); }
+  .console { transform: translate(-50%, -50%) scale(1.14); transform-origin: center bottom; }
+  .bookshelf { transform: translate(-50%, -50%); transform-origin: center bottom; }
 
-  /* ═══ SERVER RACKS (dynamic per project) ═══ */
+  /* ═══ SERVER RACKS (dynamic per project, isometric) ═══ */
   .rack {
     position: absolute;
-    z-index: 8;
-    transform: translate(-50%, -80%);
+    transform: translate(-50%, -75%) scale(0.95);
+    transform-origin: center bottom;
     transition: opacity 0.3s;
   }
 
   .rack-img {
-    width: clamp(40px, 7vw, 90px);
+    width: clamp(130px, 24vw, 280px);
+    height: auto;
+    display: block;
     image-rendering: pixelated;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
-    display: block;
+    background: transparent;
   }
 
   .rack-inactive {
@@ -436,8 +472,8 @@
   }
 
   .slot {
-    width: clamp(4px, 0.6vw, 7px);
-    height: clamp(4px, 0.6vw, 7px);
+    width: clamp(8px, 1.2vw, 14px);
+    height: clamp(8px, 1.2vw, 14px);
     border-radius: 1px;
   }
 
@@ -467,33 +503,36 @@
 
   .rack-label {
     text-align: center;
-    margin-top: 4px;
+    margin-top: 6px;
   }
 
   .rack-name {
     display: block;
-    font-size: 6px;
+    font-size: 8px;
     color: #ecf8ff;
     letter-spacing: 0.5px;
   }
 
   .rack-count {
-    font-size: 5px;
+    font-size: 7px;
     color: #9fd1ef;
   }
 
-  /* ═══ WORKERS ═══ */
+  /* ═══ WORKERS (isometric floor placement) ═══ */
   .worker {
     position: absolute;
-    z-index: 10;
-    transform: translate(-50%, -70%);
+    transform: translate(-50%, -65%) scale(0.9);
+    transform-origin: center bottom;
     pointer-events: none;
   }
 
   .worker-img {
-    width: clamp(40px, 6vw, 80px);
+    width: clamp(56px, 9vw, 100px);
+    height: auto;
+    display: block;
     image-rendering: pixelated;
     filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
+    background: transparent;
   }
 
   .worker-bob {
