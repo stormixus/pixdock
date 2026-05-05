@@ -55,7 +55,7 @@ export interface Container {
   created: number;
   ports: ContainerPort[];
   project: string | null;
-  node?: string; // added for mock UI support
+  node?: string;
 }
 
 export type DockerMode = 'swarm' | 'standalone';
@@ -67,6 +67,16 @@ export interface DashboardState {
   containers: Container[];
   timestamp: string;
   error?: string;
+}
+
+/** Envelope for all WS messages (delta protocol). */
+export interface WsEnvelope {
+  type: 'full' | 'delta';
+  rev: number;
+  data?: DashboardState;
+  containers?: Container[];
+  services?: SwarmService[];
+  nodes?: SwarmNode[];
 }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
@@ -88,6 +98,21 @@ export function clearAuthToken() {
 const RECONNECT_BASE_MS = 3000;
 const RECONNECT_MAX_MS = 60000;
 
+/**
+ * Apply a delta patch to an existing DashboardState.
+ * Returns a new state object with new array references only for patched groups,
+ * so Svelte derived stores detect changes correctly.
+ */
+function applyDelta(current: DashboardState, envelope: WsEnvelope): DashboardState {
+  return {
+    ...current,
+    ...(envelope.containers !== undefined ? { containers: envelope.containers } : {}),
+    ...(envelope.services !== undefined ? { services: envelope.services } : {}),
+    ...(envelope.nodes !== undefined ? { nodes: envelope.nodes } : {}),
+    timestamp: new Date().toISOString(),
+  };
+}
+
 export function createWebSocket(
   onState: (state: DashboardState) => void,
   onStatus: (status: ConnectionStatus) => void,
@@ -96,6 +121,7 @@ export function createWebSocket(
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout>;
   let reconnectAttempt = 0;
+  let lastDashboardState: DashboardState | null = null;
 
   function connect() {
     onStatus('connecting');
@@ -113,27 +139,48 @@ export function createWebSocket(
 
     ws.onopen = () => {
       onStatus('connected');
-      reconnectAttempt = 0; // Reset backoff on successful connection
+      reconnectAttempt = 0;
     };
 
     ws.onmessage = (event) => {
       try {
-        const state: DashboardState = JSON.parse(event.data);
-        onState(state);
+        const raw = JSON.parse(event.data);
+
+        // Detect envelope vs legacy format
+        if (raw.type === 'full') {
+          // Full snapshot — replace entire store
+          if (raw.data) {
+            lastDashboardState = raw.data;
+            onState(raw.data);
+          }
+        } else if (raw.type === 'delta') {
+          // Delta patch — apply to current state
+          if (lastDashboardState) {
+            const patched = applyDelta(lastDashboardState, raw);
+            lastDashboardState = patched;
+            onState(patched);
+          } else {
+            // No state yet (shouldn't happen in normal flow) — fall back to requesting full
+            console.warn('Received delta without prior state, ignoring');
+          }
+        } else {
+          // Legacy format (no type field) — treat as full replacement
+          console.warn('WS message missing type field, treating as full state');
+          lastDashboardState = raw;
+          onState(raw);
+        }
       } catch (e) {
         console.error('Failed to parse WebSocket message:', e);
       }
     };
 
     ws.onclose = (event) => {
-      // Code 1008 = Policy Violation (used for 401 Unauthorized on WS upgrade)
       if (event.code === 1008 || event.code === 4001) {
         onStatus('disconnected');
         onAuthError?.();
-        return; // Do not reconnect on auth failure
+        return;
       }
       onStatus('disconnected');
-      // Exponential backoff with jitter
       const delay = Math.min(
         RECONNECT_BASE_MS * Math.pow(2, reconnectAttempt) + Math.random() * 1000,
         RECONNECT_MAX_MS
@@ -151,6 +198,7 @@ export function createWebSocket(
     clearTimeout(reconnectTimer);
     ws?.close();
     ws = null;
+    lastDashboardState = null;
   }
 
   if (localStorage.getItem('pd_mock_mode') === 'true') {
@@ -183,19 +231,19 @@ export function createWebSocket(
         })),
         timestamp: new Date().toISOString()
       };
-      
-      // slightly randomize container count based on time to simulate load
+
       if (Math.random() > 0.8) {
         state.containers.pop();
         state.services[3].replicas_running = 4;
       }
+      lastDashboardState = state;
       onState(state);
     };
-    
+
     simulateData();
     reconnectTimer = setInterval(simulateData, 1500);
-    
-    return { 
+
+    return {
       disconnect: () => {
         clearInterval(reconnectTimer);
         onStatus('disconnected');

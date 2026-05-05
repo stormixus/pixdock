@@ -1,6 +1,7 @@
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
+use axum::response::IntoResponse;
 use axum::Json;
 use futures::stream;
 use http_body_util::BodyExt;
@@ -10,6 +11,8 @@ use std::convert::Infallible;
 use std::time::Duration;
 use tokio::sync::mpsc;
 
+use crate::audit::{self, AuditEvent};
+use crate::metrics;
 use crate::state::AppState;
 
 #[derive(Deserialize)]
@@ -41,16 +44,35 @@ fn validate_docker_id(id: &str) -> Result<(), (StatusCode, Json<Value>)> {
 }
 
 pub async fn health(State(state): State<AppState>) -> Json<Value> {
+    let start = std::time::Instant::now();
     match state.docker.list_containers().await {
-        Ok(_) => Json(json!({"status": "ok", "docker": {"connected": true}})),
+        Ok(_) => {
+            let elapsed_ms = start.elapsed().as_millis() as u64;
+            Json(json!({
+                "status": "ok",
+                "docker": {"connected": true},
+                "latency_ms": elapsed_ms,
+                "timestamp": chrono::Utc::now().to_rfc3339()
+            }))
+        }
         Err(e) => Json(json!({
             "status": "degraded",
             "docker": {
                 "connected": false,
                 "error": e.to_string()
-            }
+            },
+            "timestamp": chrono::Utc::now().to_rfc3339()
         })),
     }
+}
+
+pub async fn metrics() -> impl IntoResponse {
+    let body = metrics::get_metrics().render();
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/plain; version=0.0.4")],
+        body,
+    )
 }
 
 pub async fn get_nodes(
@@ -141,7 +163,11 @@ pub async fn scale_service(
         .scale_service(&service_id, payload.replicas)
         .await
     {
-        Ok(()) => Ok(Json(json!({"status": "ok", "replicas": payload.replicas}))),
+        Ok(()) => {
+            emit_audit(&state.audit_tx, "scale", "service", &service_id).await;
+            invalidate_cache_and_notify(&state, "services");
+            Ok(Json(json!({"status": "ok", "replicas": payload.replicas})))
+        }
         Err(e) => {
             tracing::error!("Scale failed: {}", e);
             Err((
@@ -192,7 +218,7 @@ pub async fn stream_container_logs(
             )
         })?;
 
-    let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(32);
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(32);
 
     tokio::spawn(async move {
         let mut mode = LogStreamMode::Unknown;
@@ -339,6 +365,7 @@ pub async fn container_action(
     Json(payload): Json<ContainerActionRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     validate_docker_id(&container_id)?;
+    let action = payload.action.clone();
     let result = match payload.action.as_str() {
         "start" => state.docker.start_container(&container_id).await,
         "stop" => state.docker.stop_container(&container_id).await,
@@ -352,7 +379,11 @@ pub async fn container_action(
     };
 
     match result {
-        Ok(()) => Ok(Json(json!({"status": "ok", "action": payload.action}))),
+        Ok(()) => {
+            emit_audit(&state.audit_tx, &action, "container", &container_id).await;
+            invalidate_cache_and_notify(&state, "containers");
+            Ok(Json(json!({"status": "ok", "action": payload.action})))
+        }
         Err(e) => {
             tracing::error!("Container action failed: {}", e);
             Err((
@@ -381,7 +412,11 @@ pub async fn delete_image(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     validate_docker_id(&image_id)?;
     match state.docker.delete_image(&image_id).await {
-        Ok(()) => Ok(Json(json!({"status": "ok"}))),
+        Ok(()) => {
+            emit_audit(&state.audit_tx, "delete", "image", &image_id).await;
+            invalidate_cache_and_notify(&state, "images");
+            Ok(Json(json!({"status": "ok"})))
+        }
         Err(e) => {
             tracing::error!("Image delete failed: {}", e);
             Err((
@@ -390,6 +425,50 @@ pub async fn delete_image(
             ))
         }
     }
+}
+
+pub async fn get_audit_log(
+    State(_state): State<AppState>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let events = audit::query_audit_log(100);
+    Ok(Json(json!(events)))
+}
+
+/// Send an audit event and log a warning if the channel is full (blocking send).
+async fn emit_audit(tx: &mpsc::Sender<AuditEvent>, action: &str, resource_type: &str, resource_id: &str) {
+    let token_hash = std::env::var("PIXDOCK_TOKEN")
+        .ok()
+        .filter(|t| !t.is_empty())
+        .map(|t| audit::hash_token(&t))
+        .unwrap_or_else(|| "anonymous".to_string());
+
+    let event = AuditEvent {
+        action: action.to_string(),
+        resource_type: resource_type.to_string(),
+        resource_id: resource_id.to_string(),
+        token_hash,
+        timestamp: chrono::Utc::now().to_rfc3339(),
+    };
+
+    match tx.send(event).await {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::error!("Audit channel closed: {}", e);
+        }
+    }
+}
+
+/// Invalidate cache entries for a prefix and trigger immediate WS broadcast.
+fn invalidate_cache_and_notify(state: &AppState, prefix: &str) {
+    if let Some(ref cache) = state.cache {
+        let removed = cache.invalidate(prefix);
+        tracing::debug!(
+            "Cache invalidated prefix='{}' (removed {} entries)",
+            prefix,
+            removed
+        );
+    }
+    state.notify.notify_one();
 }
 
 #[cfg(test)]
@@ -403,8 +482,6 @@ mod tests {
     fn err(id: &str) -> bool {
         validate_docker_id(id).is_err()
     }
-
-    // --- valid inputs ---
 
     #[test]
     fn test_valid_alphanumeric() {
@@ -431,8 +508,6 @@ mod tests {
         let s = "a".repeat(128);
         assert!(ok(&s));
     }
-
-    // --- invalid inputs ---
 
     #[test]
     fn test_invalid_empty() {

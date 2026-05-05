@@ -1,25 +1,19 @@
-mod api;
-mod auth;
-mod docker;
-mod headers;
-mod ratelimit;
-mod state;
-mod ws;
-
 use axum::{
     middleware,
     routing::{delete, get, post},
     Router,
 };
 use std::{net::SocketAddr, sync::Arc};
+use tokio::sync::Notify;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use tracing_subscriber::EnvFilter;
 
-use docker::DockerClient;
-use ratelimit::IpRateLimitLayer;
-use state::AppState;
-use ws::handler::Broadcaster;
+use pixdock::cache::DockerCache;
+use pixdock::docker::DockerClient;
+use pixdock::ratelimit::IpRateLimitLayer;
+use pixdock::state::AppState;
+use pixdock::ws::handler::Broadcaster;
 
 #[tokio::main]
 async fn main() {
@@ -37,9 +31,21 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let docker = Arc::new(DockerClient::new());
+    let api_version = DockerClient::detect_api_version().await;
+    tracing::info!("Docker API base path: {}", api_version);
+    let docker = Arc::new(DockerClient::new(api_version));
     let poll_interval_secs = read_poll_interval_secs();
     let read_only_mode = read_bool_env("PIXDOCK_READ_ONLY");
+
+    // Create cache and notification channel
+    let cache: Option<Arc<DockerCache>> = if read_bool_env("PIXDOCK_CACHE_DISABLED") {
+        tracing::info!("Docker API cache disabled");
+        None
+    } else {
+        tracing::info!("Docker API cache enabled (2s/5s TTL)");
+        Some(Arc::new(DockerCache::new(256)))
+    };
+    let notify = Arc::new(Notify::new());
 
     // Detect mode
     let is_swarm = docker.is_swarm_mode().await;
@@ -76,47 +82,72 @@ async fn main() {
     }
     tracing::info!("Dashboard poll interval: {}s", poll_interval_secs);
 
-    // Create shared broadcaster (single polling task for all WS clients)
-    let broadcaster = Broadcaster::new(docker.clone(), poll_interval_secs);
+    // Initialize metrics and audit
+    let _metrics = pixdock::metrics::init_metrics();
+    let audit_tx = pixdock::audit::spawn_audit_writer();
+
+    // Create shared broadcaster with delta + cache + notify support
+    let broadcaster = Broadcaster::new(
+        docker.clone(),
+        cache.clone(),
+        notify.clone(),
+        poll_interval_secs,
+    );
 
     let app_state = AppState {
         docker,
         broadcaster,
+        cache,
+        notify,
+        audit_tx,
     };
 
     let action_routes = Router::new()
-        .route("/api/services/{id}/scale", post(api::routes::scale_service))
+        .route(
+            "/api/services/{id}/scale",
+            post(pixdock::api::routes::scale_service),
+        )
         .route(
             "/api/containers/{id}/action",
-            post(api::routes::container_action),
+            post(pixdock::api::routes::container_action),
         )
-        .route("/api/images/{id}", delete(api::routes::delete_image))
+        .route(
+            "/api/images/{id}",
+            delete(pixdock::api::routes::delete_image),
+        )
         .layer(IpRateLimitLayer::per_minute(30));
 
     // Protected routes (require auth)
     let mut protected = Router::new()
-        .route("/api/nodes", get(api::routes::get_nodes))
-        .route("/api/services", get(api::routes::get_services))
-        .route("/api/containers", get(api::routes::get_containers))
-        .route("/api/services/{id}/tasks", get(api::routes::get_tasks))
+        .route("/api/nodes", get(pixdock::api::routes::get_nodes))
+        .route("/api/services", get(pixdock::api::routes::get_services))
+        .route(
+            "/api/containers",
+            get(pixdock::api::routes::get_containers),
+        )
+        .route(
+            "/api/services/{id}/tasks",
+            get(pixdock::api::routes::get_tasks),
+        )
         .route(
             "/api/containers/{id}/logs",
-            get(api::routes::get_container_logs),
+            get(pixdock::api::routes::get_container_logs),
         )
         .route(
             "/api/containers/{id}/logs/stream",
-            get(api::routes::stream_container_logs),
+            get(pixdock::api::routes::stream_container_logs),
         )
         .route(
             "/api/containers/{id}/inspect",
-            get(api::routes::get_container_inspect),
+            get(pixdock::api::routes::get_container_inspect),
         )
-        .route("/api/images", get(api::routes::get_images));
+        .route("/api/images", get(pixdock::api::routes::get_images))
+        .route("/api/audit", get(pixdock::api::routes::get_audit_log));
 
     if !read_only_mode {
         protected = protected.merge(action_routes);
     }
-    protected = protected.layer(middleware::from_fn(auth::auth_middleware));
+    protected = protected.layer(middleware::from_fn(pixdock::auth::auth_middleware));
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -131,16 +162,13 @@ async fn main() {
         ]);
 
     let app = Router::new()
-        // WebSocket (auth handled inside handler via query param)
-        .route("/ws", get(ws::handler::ws_handler))
-        // Public routes
-        .route("/api/health", get(api::routes::health))
-        // Protected routes
+        .route("/ws", get(pixdock::ws::handler::ws_handler))
+        .route("/api/health", get(pixdock::api::routes::health))
+        .route("/api/metrics", get(pixdock::api::routes::metrics))
         .merge(protected)
-        // Serve frontend static files
         .fallback_service(ServeDir::new("static"))
         .layer(cors)
-        .layer(middleware::from_fn(headers::security_headers))
+        .layer(middleware::from_fn(pixdock::headers::security_headers))
         .with_state(app_state);
 
     let addr = "0.0.0.0:8420";
