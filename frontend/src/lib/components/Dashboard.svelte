@@ -1,254 +1,129 @@
 <script lang="ts">
-  import { stats, connectionStatus, dockerMode } from '$lib/stores/swarm';
-  import { logout } from '$lib/stores/auth';
-  import NodeRack from './NodeRack.svelte';
-  import ServiceList from './ServiceList.svelte';
-  import ContainerGrid from './ContainerGrid.svelte';
-  import ImageList from './ImageList.svelte';
-  import SystemOverview from './SystemOverview.svelte';
-  import PixelStatusBar from './PixelStatusBar.svelte';
-  import Toast from './Toast.svelte';
+  import { currentTheme, crtEnabled, crtIntensity } from '$lib/stores/theme';
+  import Faithful from './variations/Faithful.svelte';
+  import CommandCenter from './variations/CommandCenter.svelte';
+  import Arcade from './variations/Arcade.svelte';
+  import Mainframe from './variations/Mainframe.svelte';
+  import GameBoy from './variations/GameBoy.svelte';
 
-  interface Props {
-    onlogout?: () => void;
+  let settingsOpen = $state(false);
+
+  const THEMES = [
+    { id: 'faithful', name: 'Faithful' },
+    { id: 'command', name: 'Command Center' },
+    { id: 'arcade', name: 'Arcade Cabinet' },
+    { id: 'mainframe', name: 'Mainframe Terminal' },
+    { id: 'gameboy', name: 'Game Boy Mono' }
+  ] as const;
+
+  function toggleSettings() {
+    settingsOpen = !settingsOpen;
   }
-
-  let { onlogout }: Props = $props();
-  
-  let crtEnabled = $state(true);
 
   $effect(() => {
-    const saved = localStorage.getItem('pixdock_crt_effect');
-    crtEnabled = saved !== 'false';
-
-    const unsub = $effect.root(() => {
-      $effect(() => {
-        localStorage.setItem('pixdock_crt_effect', String(crtEnabled));
-      });
-    });
-    return unsub;
+    document.documentElement.style.setProperty('--crt-display', $crtEnabled ? 'block' : 'none');
   });
-
-
-  function handleLogout() {
-    logout();
-    onlogout?.();
-  }
 </script>
 
-<div class="crt">
-  <div class="dashboard">
-    <header class="header pixel-panel">
-      <h1 class="title">
-        <span class="logo-bracket">[</span>
-        <span class="logo-px">PX</span>
-        <span class="logo-bracket">]</span>
-        PIX<span class="accent">DOCK</span>
-      </h1>
-      <div class="header-stats">
-        <button class="crt-toggle" onclick={() => crtEnabled = !crtEnabled}>
-          CRT: {crtEnabled ? 'ON' : 'OFF'}
-        </button>
+<div style="height: 100vh; width: 100vw; overflow: hidden; position: relative;">
+  <!-- Render the selected variation -->
+  {#if $currentTheme === 'faithful'}
+    <Faithful />
+  {:else if $currentTheme === 'command'}
+    <CommandCenter />
+  {:else if $currentTheme === 'arcade'}
+    <Arcade />
+  {:else if $currentTheme === 'mainframe'}
+    <Mainframe />
+  {:else if $currentTheme === 'gameboy'}
+    <GameBoy />
+  {/if}
 
-        <span class="stat">
-          <span class="led" class:led-green={$connectionStatus === 'connected'} class:led-red={$connectionStatus === 'disconnected'} class:led-yellow={$connectionStatus === 'connecting'} class:blink={$connectionStatus === 'connecting'}></span>
-          {$connectionStatus.toUpperCase()}
-        </span>
-        <span class="stat mode-badge">{$dockerMode.toUpperCase()}</span>
+  <!-- Settings FAB -->
+  <button
+    onclick={toggleSettings}
+    style="position: fixed; bottom: 16px; right: 16px; width: 48px; height: 48px; border-radius: 24px; background: var(--bg-panel); border: 2px solid var(--border); color: var(--text); z-index: 9999; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5); font-size: 20px; display: flex; align-items: center; justify-content: center;"
+    title="Display Settings"
+  >
+    ⚙
+  </button>
 
-        {#if $dockerMode === 'swarm'}
-          <span class="stat">NODES: {$stats.readyNodes}/{$stats.totalNodes}</span>
-          <span class="stat">SVCS: {$stats.healthyServices}/{$stats.totalServices}</span>
-        {/if}
-        <span class="stat">
-          CTR: {$stats.runningContainers}/{$stats.totalContainers}
-        </span>
-
-        <span class="stat auth-indicator">
-          <span class="led led-green"></span>
-          LOGGED IN
-        </span>
-
-        <button class="logout-btn" onclick={handleLogout}>LOGOUT</button>
+  <!-- Settings Panel -->
+  {#if settingsOpen}
+    <div style="position: fixed; bottom: 80px; right: 16px; width: 280px; background: var(--bg-panel); border: 4px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 9999; padding: 16px; font-family: 'JetBrains Mono', monospace;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px;">
+        <h3 style="margin: 0; font-size: 14px; color: var(--text);">Display Settings</h3>
+        <button onclick={toggleSettings} style="background: transparent; border: none; color: var(--text-dim); cursor: pointer;">✕</button>
       </div>
-    </header>
 
-    <main class="main">
-      <section class="section">
-        <h2 class="section-title">&#9654; SYSTEM OVERVIEW</h2>
-        <SystemOverview />
-      </section>
+      <div style="margin-bottom: 16px;">
+        <span style="display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">THEME VARIATION</span>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          {#each THEMES as t}
+            <button
+              onclick={() => currentTheme.set(t.id)}
+              style="text-align: left; padding: 8px 12px; background: {$currentTheme === t.id ? 'var(--blue)' : 'var(--bg-dark)'}; color: {$currentTheme === t.id ? 'var(--bg-dark)' : 'var(--text)'}; border: 1px solid var(--border); cursor: pointer; font-size: 11px; transition: all 0.2s;"
+            >
+              {t.name}
+            </button>
+          {/each}
+        </div>
+      </div>
 
-      {#if $dockerMode === 'swarm'}
-        <section class="section">
-          <h2 class="section-title">&#9654; SERVER RACK</h2>
-          <NodeRack />
-        </section>
+      <div>
+        <span style="display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">CRT FX</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input
+            type="checkbox"
+            checked={$crtEnabled}
+            onchange={(e) => crtEnabled.set(e.currentTarget.checked)}
+            style="accent-color: var(--blue);"
+          />
+          <span style="font-size: 11px; color: var(--text);">Enabled</span>
+        </div>
+        
+        {#if $crtEnabled}
+          <div style="margin-top: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-bottom: 4px;">
+              <span>Intensity</span>
+              <span>{$crtIntensity.toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="1.5"
+              step="0.05"
+              value={$crtIntensity}
+              oninput={(e) => crtIntensity.set(parseFloat(e.currentTarget.value))}
+              style="width: 100%; accent-color: var(--blue);"
+            />
+          </div>
+        {/if}
+      </div>
 
-        <section class="section">
-          <h2 class="section-title">&#9654; SERVICES</h2>
-          <ServiceList />
-        </section>
-      {/if}
-
-      <section class="section">
-        <h2 class="section-title">&#9654; CONTAINERS</h2>
-        <ContainerGrid />
-      </section>
-
-      <section class="section">
-        <h2 class="section-title">&#9654; IMAGES</h2>
-        <ImageList />
-      </section>
-    </main>
-
-    <PixelStatusBar />
-  </div>
-
-  {#if crtEnabled}
-    <div class="scanlines"></div>
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--border);">
+        <span style="display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">DATA SOURCE</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input
+            type="checkbox"
+            checked={typeof window !== 'undefined' && localStorage.getItem('pd_mock_mode') === 'true'}
+            onchange={(e) => {
+              localStorage.setItem('pd_mock_mode', String(e.currentTarget.checked));
+              window.location.reload();
+            }}
+            style="accent-color: var(--yellow);"
+          />
+          <span style="font-size: 11px; color: var(--yellow);">Virtual Fleet (Mock Data)</span>
+        </div>
+      </div>
+    </div>
   {/if}
 </div>
 
-<Toast />
-
 <style>
-  .crt {
-    position: relative;
-    min-height: 100vh;
-  }
-
-  .scanlines {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 50;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.08) 2px,
-      rgba(0, 0, 0, 0.08) 4px
-    );
-  }
-
-  .dashboard {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 8px;
-  }
-
-  .title {
-    font-size: 14px;
-    letter-spacing: 2px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .logo-bracket {
-    color: var(--text-dim);
-    font-size: 16px;
-  }
-
-  .logo-px {
-    color: var(--blue);
-    font-size: 12px;
-  }
-
-  .accent {
-    color: var(--green);
-  }
-
-  .header-stats {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-  }
-
-  .crt-toggle {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    background: transparent;
-    color: var(--purple);
-    border: 1px solid var(--purple);
-    padding: 3px 8px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    image-rendering: pixelated;
-  }
-
-  .crt-toggle:hover {
-    background: var(--purple);
-    color: var(--bg-dark);
-  }
-
-  .stat {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 8px;
-    color: var(--text-dim);
-  }
-
-  .mode-badge {
-    color: var(--yellow);
-    border: 1px solid var(--yellow);
-    padding: 2px 6px;
-    font-size: 7px;
-    letter-spacing: 1px;
-  }
-
-  .main {
-    flex: 1;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .section-title {
-    font-size: 10px;
-    color: var(--blue);
-    margin-bottom: 12px;
-    letter-spacing: 2px;
-  }
-
-  .auth-indicator {
-    color: var(--green);
-    font-size: 7px;
-    letter-spacing: 1px;
-  }
-
-  .logout-btn {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    background: transparent;
-    color: var(--red);
-    border: 1px solid var(--red);
-    padding: 3px 8px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    image-rendering: pixelated;
-  }
-
-  .logout-btn:hover {
-    background: var(--red);
-    color: var(--bg-dark);
-    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
-  }
-
-  .logout-btn:active {
-    transform: translate(1px, 1px);
+  /* Global CRT conditional overrides */
+  :global(.pd-crt::before),
+  :global(.pd-crt::after) {
+    display: var(--crt-display, block);
   }
 </style>

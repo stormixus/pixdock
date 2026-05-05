@@ -6,7 +6,7 @@ use hyperlocal::{UnixClientExt, UnixConnector, Uri};
 use serde::de::DeserializeOwned;
 
 const DOCKER_SOCKET: &str = "/var/run/docker.sock";
-const API_VERSION: &str = "/v1.43";
+const API_VERSION: &str = "/v1.44";
 
 #[derive(Clone)]
 pub struct DockerClient {
@@ -264,6 +264,6 @@ mod tests {
     #[test]
     fn test_versioned_path() {
         let path = DockerClient::versioned_path("/containers/json");
-        assert_eq!(path, "/v1.43/containers/json");
+        assert_eq!(path, "/v1.44/containers/json");
     }
 }

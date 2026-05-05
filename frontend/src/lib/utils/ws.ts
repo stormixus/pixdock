@@ -55,6 +55,7 @@ export interface Container {
   created: number;
   ports: ContainerPort[];
   project: string | null;
+  node?: string; // added for mock UI support
 }
 
 export type DockerMode = 'swarm' | 'standalone';
@@ -152,7 +153,57 @@ export function createWebSocket(
     ws = null;
   }
 
-  connect();
+  if (localStorage.getItem('pd_mock_mode') === 'true') {
+    onStatus('connected');
+    const simulateData = () => {
+      const state: DashboardState = {
+        mode: 'swarm',
+        nodes: [
+          { id: 'n1', hostname: 'mgr-alpha', role: 'manager', status: 'ready', availability: 'active', engine_version: '24.0.5', ip: '192.168.1.10', os: 'linux', arch: 'x86_64', cpus: 4, memory_bytes: 16 * 1024 ** 3 },
+          { id: 'n2', hostname: 'wrk-bravo', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0.5', ip: '192.168.1.11', os: 'linux', arch: 'x86_64', cpus: 8, memory_bytes: 32 * 1024 ** 3 },
+          { id: 'n3', hostname: 'wrk-charlie', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0.5', ip: '192.168.1.12', os: 'linux', arch: 'x86_64', cpus: 8, memory_bytes: 32 * 1024 ** 3 },
+        ],
+        services: [
+          { id: 's1', name: 'api-gateway', image: 'nginx:alpine', replicas_running: 3, replicas_desired: 3, ports: [{ published: 80, target: 80, protocol: 'tcp' }], updated_at: new Date().toISOString(), stack: 'core' },
+          { id: 's2', name: 'auth-service', image: 'pixdock/auth:v1', replicas_running: 2, replicas_desired: 2, ports: [], updated_at: new Date().toISOString(), stack: 'core' },
+          { id: 's3', name: 'redis-cache', image: 'redis:7', replicas_running: 1, replicas_desired: 1, ports: [], updated_at: new Date().toISOString(), stack: 'data' },
+          { id: 's4', name: 'worker-queue', image: 'pixdock/worker:latest', replicas_running: 5, replicas_desired: 5, ports: [], updated_at: new Date().toISOString(), stack: 'compute' },
+          { id: 's5', name: 'db-primary', image: 'postgres:15', replicas_running: 1, replicas_desired: 1, ports: [], updated_at: new Date().toISOString(), stack: 'data' },
+        ],
+        containers: Array.from({ length: 12 }).map((_, i) => ({
+          id: `c${i}abc89xyz`,
+          name: `svc_task.1.${i}a9bf`,
+          image: i % 2 === 0 ? 'nginx:alpine' : 'pixdock/worker:latest',
+          state: i === 11 ? 'exited' : 'running',
+          status: 'Up 2 hours',
+          created: Date.now() - 7200000,
+          ports: [],
+          project: i < 5 ? 'core' : i < 10 ? 'compute' : 'data',
+          node: ['mgr-alpha', 'wrk-bravo', 'wrk-charlie'][i % 3]
+        })),
+        timestamp: new Date().toISOString()
+      };
+      
+      // slightly randomize container count based on time to simulate load
+      if (Math.random() > 0.8) {
+        state.containers.pop();
+        state.services[3].replicas_running = 4;
+      }
+      onState(state);
+    };
+    
+    simulateData();
+    reconnectTimer = setInterval(simulateData, 1500);
+    
+    return { 
+      disconnect: () => {
+        clearInterval(reconnectTimer);
+        onStatus('disconnected');
+      }
+    };
+  } else {
+    connect();
+  }
 
   return { disconnect };
 }

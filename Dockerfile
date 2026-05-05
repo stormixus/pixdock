@@ -15,7 +15,7 @@ COPY backend/Cargo.toml backend/Cargo.lock* ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release && rm -rf src
 COPY backend/src/ ./src/
 COPY --from=frontend-build /app/backend/static ./static/
-RUN cargo build --release
+RUN touch src/main.rs && cargo build --release
 
 # Stage 3: Runtime
 FROM alpine:3.20
