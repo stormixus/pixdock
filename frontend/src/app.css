@@ -205,3 +205,38 @@ input, textarea { font-family: inherit; }
 @keyframes pd-marq { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 @keyframes pd-shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 @keyframes pd-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+
+/* ─── Container state animations (motion-safe) ─── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes glow-pulse {
+    0%   { box-shadow: 0 0 8px rgba(74,222,128,0.3); }
+    50%  { box-shadow: 0 0 16px rgba(74,222,128,0.6); }
+    100% { box-shadow: 0 0 8px rgba(74,222,128,0.3); }
+  }
+  @keyframes error-flash {
+    0%   { box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+    50%  { box-shadow: 0 0 20px rgba(239,68,68,0.8); }
+    100% { box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+  }
+  @keyframes restart-pulse {
+    0%   { box-shadow: 0 0 8px rgba(251,191,36,0.3); }
+    50%  { box-shadow: 0 0 16px rgba(251,191,36,0.6); }
+    100% { box-shadow: 0 0 8px rgba(251,191,36,0.3); }
+  }
+
+  .rack-running    { animation: glow-pulse 2s ease-in-out infinite; }
+  .rack-error      { animation: error-flash 1s ease-in-out infinite; }
+  .rack-restarting { animation: restart-pulse 0.8s steps(2) infinite; }
+}
+
+/* State classes applied regardless of motion preference */
+.rack-stopped {
+  opacity: 0.4;
+  filter: saturate(0.2);
+}
+
+/* Accessible focus ring for rack elements */
+.rack-focusable:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}

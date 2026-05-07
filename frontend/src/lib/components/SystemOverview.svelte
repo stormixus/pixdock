@@ -1,45 +1,10 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { containers, dockerMode, nodes, services } from '$lib/stores/swarm';
+  import { containers, dockerMode, nodes, services, selectedContainer } from '$lib/stores/swarm';
+  import { initSound, playClick } from '$lib/stores/sound';
+  import ContainerDetail from './ContainerDetail.svelte';
   import type { Container } from '$lib/utils/ws';
   import type { SwarmNode, SwarmService } from '$lib/utils/ws';
-
-  // ─── DEMO DATA (shown when no Docker connection / empty) ───
-  const DEMO_CONTAINERS: Container[] = [
-    { id: 'd1', name: 'webstack-nginx-1', image: 'nginx:alpine', state: 'running', status: 'Up 2 days', created: 0, ports: [{ private_port: 80, public_port: 8080, port_type: 'tcp' }], project: 'webstack' },
-    { id: 'd2', name: 'webstack-app-1', image: 'node:20-alpine', state: 'running', status: 'Up 2 days', created: 0, ports: [{ private_port: 3000, public_port: 3000, port_type: 'tcp' }], project: 'webstack' },
-    { id: 'd3', name: 'webstack-db-1', image: 'postgres:16', state: 'running', status: 'Up 2 days', created: 0, ports: [], project: 'webstack' },
-    { id: 'd4', name: 'api-gateway-kong-1', image: 'kong:3.4', state: 'running', status: 'Up 1 day', created: 0, ports: [{ private_port: 8000, public_port: 8000, port_type: 'tcp' }], project: 'api-gateway' },
-    { id: 'd5', name: 'api-gateway-kong-2', image: 'kong:3.4', state: 'running', status: 'Up 1 day', created: 0, ports: [], project: 'api-gateway' },
-    { id: 'd6', name: 'api-gateway-redis-1', image: 'redis:7-alpine', state: 'running', status: 'Up 1 day', created: 0, ports: [], project: 'api-gateway' },
-    { id: 'd7', name: 'monitoring-prometheus-1', image: 'prom/prometheus:latest', state: 'running', status: 'Up 5 hours', created: 0, ports: [{ private_port: 9090, public_port: 9090, port_type: 'tcp' }], project: 'monitoring' },
-    { id: 'd8', name: 'monitoring-grafana-1', image: 'grafana/grafana:latest', state: 'running', status: 'Up 5 hours', created: 0, ports: [{ private_port: 3000, public_port: 3001, port_type: 'tcp' }], project: 'monitoring' },
-    { id: 'd9', name: 'monitoring-node-exporter', image: 'prom/node-exporter', state: 'exited', status: 'Exited (0)', created: 0, ports: [], project: 'monitoring' },
-    { id: 'd10', name: 'redis-master', image: 'redis:7-alpine', state: 'running', status: 'Up 3 days', created: 0, ports: [{ private_port: 6379, public_port: 6379, port_type: 'tcp' }], project: 'redis-cluster' },
-    { id: 'd11', name: 'redis-replica-1', image: 'redis:7-alpine', state: 'running', status: 'Up 3 days', created: 0, ports: [], project: 'redis-cluster' },
-    { id: 'd12', name: 'redis-replica-2', image: 'redis:7-alpine', state: 'restarting', status: 'Restarting', created: 0, ports: [], project: 'redis-cluster' },
-    { id: 'd13', name: 'frontend-next-1', image: 'node:20-alpine', state: 'running', status: 'Up 1 hour', created: 0, ports: [{ private_port: 3000, public_port: 3002, port_type: 'tcp' }], project: 'frontend' },
-    { id: 'd14', name: 'frontend-cache-1', image: 'memcached:alpine', state: 'exited', status: 'Exited (0)', created: 0, ports: [], project: 'frontend' },
-  ];
-
-  const DEMO_NODES: SwarmNode[] = [
-    { id: 'n1', hostname: 'manager-01', role: 'manager', status: 'ready', availability: 'active', engine_version: '24.0', ip: '192.168.1.10', os: 'linux', arch: 'amd64', cpus: 8, memory_bytes: 17179869184 },
-    { id: 'n2', hostname: 'worker-01', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0', ip: '192.168.1.11', os: 'linux', arch: 'amd64', cpus: 4, memory_bytes: 8589934592 },
-    { id: 'n3', hostname: 'worker-02', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0', ip: '192.168.1.12', os: 'linux', arch: 'amd64', cpus: 4, memory_bytes: 8589934592 },
-  ];
-
-  const DEMO_SERVICES: SwarmService[] = [
-    { id: 's1', name: 'web_nginx', image: 'nginx:alpine', replicas_running: 2, replicas_desired: 2, ports: [{ published: 80, target: 80, protocol: 'tcp' }], updated_at: '', stack: 'web' },
-    { id: 's2', name: 'api_kong', image: 'kong:3.4', replicas_running: 3, replicas_desired: 3, ports: [], updated_at: '', stack: 'api' },
-  ];
-
-  // Use demo data when no real data (Docker disconnected / empty)
-  const useDemo = $derived($containers.length === 0);
-  const displayContainers = $derived(useDemo ? DEMO_CONTAINERS : $containers);
-  const displayNodes = $derived(useDemo ? DEMO_NODES : $nodes);
-  const displayServices = $derived(useDemo ? DEMO_SERVICES : $services);
-  // Demo shows swarm mode with multiple nodes; real data uses actual mode
-  const displayMode = $derived(useDemo ? 'swarm' as const : $dockerMode);
 
   // ─── SPRITE PATHS (use RGBA/transparent assets only) ───
   const SPRITES = {
@@ -101,16 +66,31 @@
     active: boolean;
   }
 
+  interface Particle {
+    x: number; y: number;
+    vx: number; vy: number;
+    life: number; maxLife: number;
+    type: 'smoke' | 'sparkle';
+  }
+
   // ─── STATE ───
   let frame = $state(0);
   let timer: ReturnType<typeof setInterval> | undefined;
-  // Room background is CSS-only (dark gradient), no image needed
+
+  // Canvas particle state
+  let particleCanvas: HTMLCanvasElement;
+  let sceneCanvasEl: HTMLDivElement;
+  let animFrameId = 0;
+  let resizeObserver: ResizeObserver;
+  let particles: Particle[] = [];
+  let lastFrameTime = 0;
+  const MAX_PARTICLES = 20;
 
   // ─── DERIVED DATA ───
   const composeProjects = $derived.by(() => {
     const projectMap = new Map<string, Container[]>();
 
-    for (const ctr of displayContainers) {
+    for (const ctr of $containers) {
       const project = ctr.project?.trim() || '_standalone';
       if (!projectMap.has(project)) projectMap.set(project, []);
       projectMap.get(project)!.push(ctr);
@@ -154,23 +134,29 @@
     }))
   );
 
-  const runningCount = $derived(displayContainers.filter(c => c.state === 'running').length);
-  const totalCount = $derived(displayContainers.length);
-  const hostCount = $derived(displayMode === 'swarm' && displayNodes.length > 0 ? displayNodes.length : 1);
+  const runningCount = $derived($containers.filter(c => c.state === 'running').length);
+  const totalCount = $derived($containers.length);
+  const hostCount = $derived($dockerMode === 'swarm' && $nodes.length > 0 ? $nodes.length : 1);
   const uniqueImageCount = $derived(new Set([
-    ...displayServices.map(s => s.image),
-    ...displayContainers.map(c => c.image),
+    ...$services.map(s => s.image),
+    ...$containers.map(c => c.image),
   ]).size);
 
-  // ─── ANIMATION ───
-  onMount(() => {
-    timer = setInterval(() => { frame += 1; }, 150);
-  });
+  // Selected container object for ContainerDetail panel
+  const selectedContainerObj = $derived(
+    $selectedContainer
+      ? ($containers.find(c => c.id === $selectedContainer) ?? null)
+      : null
+  );
 
-  onDestroy(() => {
-    if (timer) clearInterval(timer);
-  });
-
+  // ─── HELPERS ───
+  function rackStateClass(project: ComposeProject): string {
+    const ctrs = project.containers;
+    if (ctrs.some(c => c.state === 'exited' || c.state === 'dead')) return 'rack-error';
+    if (ctrs.some(c => c.state === 'restarting')) return 'rack-restarting';
+    if (project.running === project.total && project.total > 0) return 'rack-running';
+    return 'rack-stopped';
+  }
 
   function projectLabel(name: string): string {
     return name === '_standalone' ? 'LOCAL' : name.toUpperCase();
@@ -181,13 +167,147 @@
     if (state === 'exited' || state === 'dead') return 'slot-stopped';
     return 'slot-other';
   }
+
+  // ─── PARTICLE SYSTEM ───
+  function spawnParticles(canvasWidth: number, canvasHeight: number): void {
+    for (const rack of racks) {
+      if (particles.length >= MAX_PARTICLES) break;
+      const px = (rack.x / 100) * canvasWidth;
+      const py = (rack.y / 100) * canvasHeight;
+
+      const hasError = rack.project.containers.some(
+        c => c.state === 'exited' || c.state === 'dead'
+      );
+      const isHealthy =
+        rack.project.running === rack.project.total && rack.project.total > 0;
+
+      if (hasError && Math.random() < 0.3) {
+        particles.push({
+          x: px + (Math.random() - 0.5) * 20,
+          y: py,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: -0.5 - Math.random() * 0.5,
+          life: 60,
+          maxLife: 60,
+          type: 'smoke',
+        });
+      } else if (isHealthy && Math.random() < 0.15) {
+        particles.push({
+          x: px + (Math.random() - 0.5) * 20,
+          y: py,
+          vx: (Math.random() - 0.5) * 1,
+          vy: -1 - Math.random(),
+          life: 30,
+          maxLife: 30,
+          type: 'sparkle',
+        });
+      }
+    }
+  }
+
+  function drawParticles(timestamp: number): void {
+    if (!particleCanvas) return;
+    const ctx = particleCanvas.getContext('2d');
+    if (!ctx) return;
+
+    const delta = timestamp - lastFrameTime;
+    lastFrameTime = timestamp;
+
+    ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+
+    // RPi4 perf guard: slow frame → clear particles and skip spawning
+    if (delta > 33) {
+      particles = [];
+      animFrameId = requestAnimationFrame(drawParticles);
+      return;
+    }
+
+    spawnParticles(particleCanvas.width, particleCanvas.height);
+    particles = particles.filter(p => p.life > 0);
+
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+
+      const alpha = p.life / p.maxLife;
+
+      if (p.type === 'smoke') {
+        const radius = 3 + (1 - alpha) * 6;
+        ctx.fillStyle = `rgba(180, 180, 180, ${alpha * 0.35})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = `rgba(74, 222, 128, ${alpha})`;
+        ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
+      }
+    }
+
+    animFrameId = requestAnimationFrame(drawParticles);
+  }
+
+  // ─── CLICK-TO-FOCUS HANDLERS ───
+  function handleRackClick(project: ComposeProject): void {
+    initSound();
+    playClick();
+    const firstId = project.containers[0]?.id ?? null;
+    selectedContainer.set(firstId);
+  }
+
+  function handleRackKeydown(e: KeyboardEvent, project: ComposeProject): void {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleRackClick(project);
+    }
+  }
+
+  function handleEscape(e: KeyboardEvent): void {
+    if (e.key === 'Escape') selectedContainer.set(null);
+  }
+
+  // ─── LIFECYCLE ───
+  onMount(() => {
+    timer = setInterval(() => { frame += 1; }, 150);
+
+    // Canvas particle setup
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        particleCanvas.width = entry.contentRect.width;
+        particleCanvas.height = entry.contentRect.height;
+      }
+    });
+    resizeObserver.observe(sceneCanvasEl);
+
+    if (!reducedMotion) {
+      animFrameId = requestAnimationFrame(drawParticles);
+    }
+  });
+
+  onDestroy(() => {
+    if (timer) clearInterval(timer);
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    if (resizeObserver) resizeObserver.disconnect();
+  });
 </script>
+
+<svelte:window onkeydown={handleEscape} />
 
 <div class="overview-shell pixel-panel">
   <!-- ═══ SCENE ═══ -->
   <div class="scene-shell pixel-border">
-    <div class="scene-canvas" aria-label="SERVER ROOM OVERVIEW" style="--bg-image: url('{BG_IMAGE}')">
+    <div
+      bind:this={sceneCanvasEl}
+      class="scene-canvas"
+      aria-label="SERVER ROOM OVERVIEW"
+      style="--bg-image: url('{BG_IMAGE}')"
+    >
       <!-- Background: isometric server room (room_empty.png) -->
+
+      <!-- Particle canvas overlay -->
+      <canvas bind:this={particleCanvas} class="particle-canvas"></canvas>
 
       <!-- Zone HUD tags -->
       <div class="zone-tag zone-hosts">
@@ -218,10 +338,15 @@
       <!-- Server Racks (dynamic per project, isometric depth by y) -->
       {#each racks as rack, i}
         <div
-          class="rack"
+          class="rack rack-focusable {rackStateClass(rack.project)}"
           class:rack-active={rack.project.isActive}
           class:rack-inactive={!rack.project.isActive}
           style="left:{rack.x}%;top:{rack.y}%;z-index:{Math.round(rack.y) + 5};"
+          tabindex="0"
+          role="button"
+          aria-label="Project {rack.project.name}: {rack.project.running}/{rack.project.total} containers"
+          onclick={() => handleRackClick(rack.project)}
+          onkeydown={(e) => handleRackKeydown(e, rack.project)}
         >
           <img class="rack-img" src={SPRITES.rack} alt="" />
 
@@ -264,8 +389,8 @@
         {/if}
       {/each}
 
-      <!-- Empty state (only when no demo data either) -->
-      {#if composeProjects.length === 0 && !useDemo}
+      <!-- Empty state -->
+      {#if composeProjects.length === 0}
         <div class="empty-room">
           <span class="blink-text">WAITING FOR CONTAINERS...</span>
         </div>
@@ -304,10 +429,10 @@
         <strong>{runningCount}/{totalCount}</strong>
       </div>
       <div class="list">
-        {#if displayContainers.length === 0}
+        {#if $containers.length === 0}
           <div class="empty-state">NO CONTAINER DATA</div>
         {:else}
-          {#each displayContainers as ctr}
+          {#each $containers as ctr}
             <div class="list-row" class:inactive={ctr.state !== 'running'}>
               <span class="led" class:led-green={ctr.state === 'running'} class:led-red={ctr.state === 'exited' || ctr.state === 'dead'} class:led-yellow={ctr.state !== 'running' && ctr.state !== 'exited' && ctr.state !== 'dead'}></span>
               <span class="row-main">{ctr.name.length > 20 ? ctr.name.slice(0, 20) + '...' : ctr.name}</span>
@@ -323,11 +448,11 @@
       <h3 class="card-title">HOST INFO</h3>
       <div class="meta-row">
         <span>MODE</span>
-        <strong>{displayMode.toUpperCase()}{#if useDemo} (DEMO){/if}</strong>
+        <strong>{$dockerMode.toUpperCase()}</strong>
       </div>
       <div class="list">
-        {#if displayMode === 'swarm'}
-          {#each displayNodes as node}
+        {#if $dockerMode === 'swarm'}
+          {#each $nodes as node}
             <div class="list-row">
               <span class="led" class:led-green={node.status === 'ready'} class:led-red={node.status !== 'ready'}></span>
               <span class="row-main">{node.hostname}</span>
@@ -347,6 +472,15 @@
     </section>
   </div>
 </div>
+
+<!-- ContainerDetail slide-out panel -->
+{#if $selectedContainer && selectedContainerObj}
+  <ContainerDetail
+    containerId={$selectedContainer}
+    containerName={selectedContainerObj.name}
+    onClose={() => selectedContainer.set(null)}
+  />
+{/if}
 
 <style>
   /* ═══ SHELL ═══ */
@@ -388,6 +522,14 @@
     background:
       linear-gradient(to bottom, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.2)),
       repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.04) 2px, rgba(0, 0, 0, 0.04) 4px);
+  }
+
+  /* ═══ PARTICLE CANVAS ═══ */
+  .particle-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 65;
   }
 
   /* ═══ ZONE HUD TAGS ═══ */
@@ -443,6 +585,7 @@
     transform: translate(-50%, -75%) scale(0.95);
     transform-origin: center bottom;
     transition: opacity 0.3s;
+    cursor: pointer;
   }
 
   .rack-img {

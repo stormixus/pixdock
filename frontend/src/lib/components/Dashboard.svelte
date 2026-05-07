@@ -1,5 +1,7 @@
 <script lang="ts">
   import { currentTheme, crtEnabled, crtIntensity } from '$lib/stores/theme';
+  import { soundEnabled, soundVolume, initSound } from '$lib/stores/sound';
+  import { UI_STRINGS } from '$lib/constants/strings';
   import Faithful from './variations/Faithful.svelte';
   import CommandCenter from './variations/CommandCenter.svelte';
   import Arcade from './variations/Arcade.svelte';
@@ -95,6 +97,42 @@
               step="0.05"
               value={$crtIntensity}
               oninput={(e) => crtIntensity.set(parseFloat(e.currentTarget.value))}
+              style="width: 100%; accent-color: var(--blue);"
+            />
+          </div>
+        {/if}
+      </div>
+
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--border);">
+        <span style="display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">SOUND</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input
+            type="checkbox"
+            checked={$soundEnabled}
+            onchange={(e) => {
+              if (e.currentTarget.checked) initSound();
+              soundEnabled.set(e.currentTarget.checked);
+            }}
+            style="accent-color: var(--blue);"
+          />
+          <span style="font-size: 11px; color: var(--text);">
+            {$soundEnabled ? UI_STRINGS.UNMUTE_LABEL : UI_STRINGS.MUTE_LABEL}
+          </span>
+        </div>
+
+        {#if $soundEnabled}
+          <div style="margin-top: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-bottom: 4px;">
+              <span>{UI_STRINGS.VOLUME_LABEL}</span>
+              <span>{Math.round($soundVolume * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={$soundVolume * 100}
+              oninput={(e) => soundVolume.set(parseFloat(e.currentTarget.value) / 100)}
               style="width: 100%; accent-color: var(--blue);"
             />
           </div>

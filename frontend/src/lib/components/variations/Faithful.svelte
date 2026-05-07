@@ -1,6 +1,7 @@
 <script lang="ts">
   import { stacks, nodes, services, containers, stats, connectionStatus, dockerMode } from '$lib/stores/swarm';
   import { logout } from '$lib/stores/auth';
+  import { soundEnabled, initSound } from '$lib/stores/sound';
   import { spark, fmtClock, stateLed, createTicker, createClock } from '$lib/utils/mock.svelte';
   import Led from '../ui/Led.svelte';
   import Gauge from '../ui/Gauge.svelte';
@@ -59,6 +60,11 @@
         {/if}
         <span>CTR: <span style="color: var(--green);">{$stats.runningContainers}/{$stats.totalContainers}</span></span>
         <span style="color: var(--green); font-size: 7px; letter-spacing: 1px;">● LOGGED IN</span>
+        <button
+          onclick={() => { if (!$soundEnabled) initSound(); soundEnabled.set(!$soundEnabled); }}
+          title={$soundEnabled ? 'Mute sounds' : 'Unmute sounds'}
+          style="font-size: 14px; background: transparent; border: none; cursor: pointer; padding: 2px 4px; line-height: 1;"
+        >{$soundEnabled ? '🔊' : '🔇'}</button>
         <button onclick={handleLogout} style="font-size: 7px; color: var(--red); border: 1px solid var(--red); padding: 3px 8px;">LOGOUT</button>
       </div>
     </header>

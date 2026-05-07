@@ -203,49 +203,118 @@ export function createWebSocket(
 
   if (localStorage.getItem('pd_mock_mode') === 'true') {
     onStatus('connected');
-    const simulateData = () => {
+
+    const showcaseNodes: SwarmNode[] = [
+      { id: 'n1', hostname: 'manager-01', role: 'manager', status: 'ready', availability: 'active', engine_version: '24.0.7', ip: '192.168.1.10', os: 'linux', arch: 'amd64', cpus: 8, memory_bytes: 17179869184 },
+      { id: 'n2', hostname: 'worker-01', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0.7', ip: '192.168.1.11', os: 'linux', arch: 'amd64', cpus: 4, memory_bytes: 8589934592 },
+      { id: 'n3', hostname: 'worker-02', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0.7', ip: '192.168.1.12', os: 'linux', arch: 'amd64', cpus: 4, memory_bytes: 8589934592 },
+    ];
+
+    const showcaseServices: SwarmService[] = [
+      { id: 's1', name: 'webstack_nginx', image: 'nginx:alpine', replicas_running: 2, replicas_desired: 2, ports: [{ published: 80, target: 80, protocol: 'tcp' }], updated_at: new Date().toISOString(), stack: 'webstack' },
+      { id: 's2', name: 'webstack_app', image: 'node:20-alpine', replicas_running: 2, replicas_desired: 2, ports: [], updated_at: new Date().toISOString(), stack: 'webstack' },
+      { id: 's3', name: 'monitoring_prometheus', image: 'prom/prometheus:latest', replicas_running: 1, replicas_desired: 1, ports: [{ published: 9090, target: 9090, protocol: 'tcp' }], updated_at: new Date().toISOString(), stack: 'monitoring' },
+      { id: 's4', name: 'monitoring_grafana', image: 'grafana/grafana:latest', replicas_running: 1, replicas_desired: 1, ports: [{ published: 3001, target: 3000, protocol: 'tcp' }], updated_at: new Date().toISOString(), stack: 'monitoring' },
+      { id: 's5', name: 'api-gateway_kong', image: 'kong:3.4', replicas_running: 2, replicas_desired: 2, ports: [{ published: 8000, target: 8000, protocol: 'tcp' }], updated_at: new Date().toISOString(), stack: 'api-gateway' },
+    ];
+
+    let currentContainers: Container[] = [
+      // webstack: nginx + app + db
+      { id: 'ws-nginx-1', name: 'webstack-nginx-1', image: 'nginx:alpine', state: 'running', status: 'Up 2 days', created: Date.now() - 172800000, ports: [{ private_port: 80, public_port: 8080, port_type: 'tcp' }], project: 'webstack', node: 'worker-01' },
+      { id: 'ws-app-1', name: 'webstack-app-1', image: 'node:20-alpine', state: 'running', status: 'Up 2 days', created: Date.now() - 172800000, ports: [{ private_port: 3000, public_port: 3000, port_type: 'tcp' }], project: 'webstack', node: 'worker-02' },
+      { id: 'ws-db-1', name: 'webstack-db-1', image: 'postgres:16', state: 'running', status: 'Up 2 days', created: Date.now() - 172800000, ports: [], project: 'webstack', node: 'manager-01' },
+      // monitoring: prometheus + grafana + node-exporter
+      { id: 'mon-prom-1', name: 'monitoring-prometheus-1', image: 'prom/prometheus:latest', state: 'running', status: 'Up 5 hours', created: Date.now() - 18000000, ports: [{ private_port: 9090, public_port: 9090, port_type: 'tcp' }], project: 'monitoring', node: 'manager-01' },
+      { id: 'mon-graf-1', name: 'monitoring-grafana-1', image: 'grafana/grafana:latest', state: 'running', status: 'Up 5 hours', created: Date.now() - 18000000, ports: [{ private_port: 3000, public_port: 3001, port_type: 'tcp' }], project: 'monitoring', node: 'worker-01' },
+      { id: 'mon-exp-1', name: 'monitoring-node-exporter-1', image: 'prom/node-exporter', state: 'running', status: 'Up 5 hours', created: Date.now() - 18000000, ports: [], project: 'monitoring', node: 'worker-02' },
+      // redis-cluster: master + replica-1 + replica-2
+      { id: 'rc-master-1', name: 'redis-master', image: 'redis:7-alpine', state: 'running', status: 'Up 3 days', created: Date.now() - 259200000, ports: [{ private_port: 6379, public_port: 6379, port_type: 'tcp' }], project: 'redis-cluster', node: 'worker-01' },
+      { id: 'rc-rep-1', name: 'redis-replica-1', image: 'redis:7-alpine', state: 'running', status: 'Up 3 days', created: Date.now() - 259200000, ports: [], project: 'redis-cluster', node: 'worker-02' },
+      { id: 'rc-rep-2', name: 'redis-replica-2', image: 'redis:7-alpine', state: 'running', status: 'Up 3 days', created: Date.now() - 259200000, ports: [], project: 'redis-cluster', node: 'worker-01' },
+      // api-gateway: kong-1 + kong-2 + redis
+      { id: 'ag-kong-1', name: 'api-gateway-kong-1', image: 'kong:3.4', state: 'running', status: 'Up 1 day', created: Date.now() - 86400000, ports: [{ private_port: 8000, public_port: 8000, port_type: 'tcp' }], project: 'api-gateway', node: 'worker-01' },
+      { id: 'ag-kong-2', name: 'api-gateway-kong-2', image: 'kong:3.4', state: 'running', status: 'Up 1 day', created: Date.now() - 86400000, ports: [], project: 'api-gateway', node: 'worker-02' },
+      { id: 'ag-redis-1', name: 'api-gateway-redis-1', image: 'redis:7-alpine', state: 'running', status: 'Up 1 day', created: Date.now() - 86400000, ports: [], project: 'api-gateway', node: 'manager-01' },
+      // frontend: next + cache
+      { id: 'fe-next-1', name: 'frontend-next-1', image: 'node:20-alpine', state: 'running', status: 'Up 1 hour', created: Date.now() - 3600000, ports: [{ private_port: 3000, public_port: 3002, port_type: 'tcp' }], project: 'frontend', node: 'worker-02' },
+      { id: 'fe-cache-1', name: 'frontend-cache-1', image: 'memcached:alpine', state: 'running', status: 'Up 1 hour', created: Date.now() - 3600000, ports: [], project: 'frontend', node: 'worker-01' },
+    ];
+
+    const emitState = () => {
       const state: DashboardState = {
         mode: 'swarm',
-        nodes: [
-          { id: 'n1', hostname: 'mgr-alpha', role: 'manager', status: 'ready', availability: 'active', engine_version: '24.0.5', ip: '192.168.1.10', os: 'linux', arch: 'x86_64', cpus: 4, memory_bytes: 16 * 1024 ** 3 },
-          { id: 'n2', hostname: 'wrk-bravo', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0.5', ip: '192.168.1.11', os: 'linux', arch: 'x86_64', cpus: 8, memory_bytes: 32 * 1024 ** 3 },
-          { id: 'n3', hostname: 'wrk-charlie', role: 'worker', status: 'ready', availability: 'active', engine_version: '24.0.5', ip: '192.168.1.12', os: 'linux', arch: 'x86_64', cpus: 8, memory_bytes: 32 * 1024 ** 3 },
-        ],
-        services: [
-          { id: 's1', name: 'api-gateway', image: 'nginx:alpine', replicas_running: 3, replicas_desired: 3, ports: [{ published: 80, target: 80, protocol: 'tcp' }], updated_at: new Date().toISOString(), stack: 'core' },
-          { id: 's2', name: 'auth-service', image: 'pixdock/auth:v1', replicas_running: 2, replicas_desired: 2, ports: [], updated_at: new Date().toISOString(), stack: 'core' },
-          { id: 's3', name: 'redis-cache', image: 'redis:7', replicas_running: 1, replicas_desired: 1, ports: [], updated_at: new Date().toISOString(), stack: 'data' },
-          { id: 's4', name: 'worker-queue', image: 'pixdock/worker:latest', replicas_running: 5, replicas_desired: 5, ports: [], updated_at: new Date().toISOString(), stack: 'compute' },
-          { id: 's5', name: 'db-primary', image: 'postgres:15', replicas_running: 1, replicas_desired: 1, ports: [], updated_at: new Date().toISOString(), stack: 'data' },
-        ],
-        containers: Array.from({ length: 12 }).map((_, i) => ({
-          id: `c${i}abc89xyz`,
-          name: `svc_task.1.${i}a9bf`,
-          image: i % 2 === 0 ? 'nginx:alpine' : 'pixdock/worker:latest',
-          state: i === 11 ? 'exited' : 'running',
-          status: 'Up 2 hours',
-          created: Date.now() - 7200000,
-          ports: [],
-          project: i < 5 ? 'core' : i < 10 ? 'compute' : 'data',
-          node: ['mgr-alpha', 'wrk-bravo', 'wrk-charlie'][i % 3]
-        })),
-        timestamp: new Date().toISOString()
+        nodes: showcaseNodes,
+        services: showcaseServices,
+        containers: [...currentContainers],
+        timestamp: new Date().toISOString(),
       };
-
-      if (Math.random() > 0.8) {
-        state.containers.pop();
-        state.services[3].replicas_running = 4;
-      }
       lastDashboardState = state;
       onState(state);
     };
 
-    simulateData();
-    reconnectTimer = setInterval(simulateData, 1500);
+    // Scripted incidents cycle: crash → restart → spawn → remove (every 5-10s)
+    const incidents: Array<() => void> = [
+      // 0: crash — first running container → exited
+      () => {
+        const idx = currentContainers.findIndex(c => c.state === 'running');
+        if (idx >= 0) {
+          currentContainers = currentContainers.map((c, i) =>
+            i === idx ? { ...c, state: 'exited', status: 'Exited (1)' } : c
+          );
+          emitState();
+        }
+      },
+      // 1: restart — first exited container → restarting → running after 3s
+      () => {
+        const idx = currentContainers.findIndex(c => c.state === 'exited');
+        if (idx >= 0) {
+          currentContainers = currentContainers.map((c, i) =>
+            i === idx ? { ...c, state: 'restarting', status: 'Restarting (0)' } : c
+          );
+          emitState();
+          setTimeout(() => {
+            currentContainers = currentContainers.map(c =>
+              c.state === 'restarting' ? { ...c, state: 'running', status: 'Up a second' } : c
+            );
+            emitState();
+          }, 3000);
+        }
+      },
+      // 2: spawn — add ephemeral worker to webstack
+      () => {
+        const newId = `ws-worker-${Date.now()}`;
+        currentContainers = [
+          ...currentContainers,
+          { id: newId, name: `webstack-worker-${currentContainers.length}`, image: 'node:20-alpine', state: 'running', status: 'Up a second', created: Date.now(), ports: [], project: 'webstack', node: 'worker-01' },
+        ];
+        emitState();
+      },
+      // 3: remove — remove any ephemeral worker that was spawned
+      () => {
+        const idx = currentContainers.findIndex(c => c.id.startsWith('ws-worker-'));
+        if (idx >= 0) {
+          currentContainers = currentContainers.filter((_, i) => i !== idx);
+          emitState();
+        }
+      },
+    ];
+
+    let incidentIdx = 0;
+    const scheduleNextIncident = () => {
+      const delay = 5000 + Math.random() * 5000; // 5–10 seconds
+      reconnectTimer = setTimeout(() => {
+        incidents[incidentIdx % incidents.length]();
+        incidentIdx++;
+        scheduleNextIncident();
+      }, delay);
+    };
+
+    emitState();
+    scheduleNextIncident();
 
     return {
       disconnect: () => {
-        clearInterval(reconnectTimer);
+        clearTimeout(reconnectTimer);
         onStatus('disconnected');
       }
     };
