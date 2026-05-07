@@ -7,8 +7,10 @@
   import Arcade from './variations/Arcade.svelte';
   import Mainframe from './variations/Mainframe.svelte';
   import GameBoy from './variations/GameBoy.svelte';
+  import ThemeEditor from './ThemeEditor.svelte';
 
   let settingsOpen = $state(false);
+  let sceneColorsOpen = $state(false);
 
   const THEMES = [
     { id: 'faithful', name: 'Faithful' },
@@ -136,6 +138,19 @@
               style="width: 100%; accent-color: var(--blue);"
             />
           </div>
+        {/if}
+      </div>
+
+      <div style="margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--border);">
+        <button
+          onclick={() => sceneColorsOpen = !sceneColorsOpen}
+          style="display: flex; justify-content: space-between; align-items: center; width: 100%; background: transparent; border: none; cursor: pointer; padding: 0; margin-bottom: {sceneColorsOpen ? '10px' : '0'};"
+        >
+          <span style="font-size: 11px; color: var(--text-dim);">{UI_STRINGS.SCENE_COLORS_LABEL.toUpperCase()}</span>
+          <span style="font-size: 10px; color: var(--text-dim);">{sceneColorsOpen ? '▲' : '▼'}</span>
+        </button>
+        {#if sceneColorsOpen}
+          <ThemeEditor />
         {/if}
       </div>
 

@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { containers, dockerMode, nodes, services, selectedContainer } from '$lib/stores/swarm';
   import { initSound, playClick } from '$lib/stores/sound';
+  import { currentScenePalette, applyScenePalette } from '$lib/stores/scenePalette';
   import ContainerDetail from './ContainerDetail.svelte';
   import type { Container } from '$lib/utils/ws';
   import type { SwarmNode, SwarmService } from '$lib/utils/ws';
@@ -266,6 +267,11 @@
     if (e.key === 'Escape') selectedContainer.set(null);
   }
 
+  // ─── PALETTE ───
+  $effect(() => {
+    if (sceneCanvasEl) applyScenePalette($currentScenePalette, sceneCanvasEl);
+  });
+
   // ─── LIFECYCLE ───
   onMount(() => {
     timer = setInterval(() => { frame += 1; }, 150);
@@ -510,7 +516,7 @@
     background:
       linear-gradient(to bottom, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.3)),
       var(--bg-image, url('/assets/room_empty_bg.png')) center center / cover no-repeat;
-    background-color: #0a0e1a;
+    background-color: var(--scene-floor, #0a0e1a);
   }
 
   .scene-canvas::after {
@@ -542,12 +548,12 @@
     padding: 5px 7px;
     font-size: 6px;
     letter-spacing: 1px;
-    color: #bdd0ec;
-    border: 2px solid rgba(127, 198, 255, 0.85);
+    color: var(--scene-cable-b, #bdd0ec);
+    border: 2px solid var(--scene-cable-a, rgba(127, 198, 255, 0.85));
     background: rgba(6, 14, 32, 0.8);
   }
 
-  .zone-tag strong { font-size: 8px; color: #f2f7ff; }
+  .zone-tag strong { font-size: 8px; color: var(--scene-text-accent, #f2f7ff); }
   .zone-hosts { left: 3%; top: 3%; }
   .zone-containers { left: 37%; top: 3%; }
   .zone-images { right: 3%; top: 3%; }
@@ -570,7 +576,7 @@
 
   .furniture-label {
     font-size: 6px;
-    color: #9fd1ef;
+    color: var(--scene-text-secondary, #9fd1ef);
     text-align: center;
     margin-top: 2px;
     letter-spacing: 1px;
@@ -621,18 +627,18 @@
   }
 
   .slot-running {
-    background: #4ade80;
-    box-shadow: 0 0 4px rgba(74, 222, 128, 0.6);
+    background: var(--scene-led-running, #4ade80);
+    box-shadow: 0 0 4px var(--scene-led-running, rgba(74, 222, 128, 0.6));
   }
 
   .slot-stopped {
-    background: #ef4444;
-    box-shadow: 0 0 3px rgba(239, 68, 68, 0.4);
+    background: var(--scene-led-stopped, #ef4444);
+    box-shadow: 0 0 3px var(--scene-led-stopped, rgba(239, 68, 68, 0.4));
   }
 
   .slot-other {
-    background: #facc15;
-    box-shadow: 0 0 3px rgba(250, 204, 21, 0.4);
+    background: var(--scene-led-other, #facc15);
+    box-shadow: 0 0 3px var(--scene-led-other, rgba(250, 204, 21, 0.4));
   }
 
   .slot-blink { animation: blink-led 0.8s step-end infinite; }
@@ -640,7 +646,7 @@
 
   .slot-overflow {
     font-size: 5px;
-    color: #9fd1ef;
+    color: var(--scene-text-secondary, #9fd1ef);
     padding: 0 2px;
   }
 
@@ -652,13 +658,13 @@
   .rack-name {
     display: block;
     font-size: 8px;
-    color: #ecf8ff;
+    color: var(--scene-text-primary, #ecf8ff);
     letter-spacing: 0.5px;
   }
 
   .rack-count {
     font-size: 7px;
-    color: #9fd1ef;
+    color: var(--scene-text-secondary, #9fd1ef);
   }
 
   /* ═══ WORKERS (isometric floor placement) ═══ */
@@ -690,7 +696,7 @@
     transform: translate(-50%, -50%);
     z-index: 15;
     font-size: 8px;
-    color: #9fd1ef;
+    color: var(--scene-text-secondary, #9fd1ef);
     letter-spacing: 1px;
   }
 
@@ -710,8 +716,8 @@
     gap: 8px;
     min-height: 210px;
     padding: 10px;
-    background: rgba(7, 10, 24, 0.86);
-    border-color: #354768;
+    background: var(--scene-card-bg, rgba(7, 10, 24, 0.86));
+    border-color: var(--scene-border-primary, #354768);
   }
 
   .card-title {

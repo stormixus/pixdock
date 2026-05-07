@@ -209,19 +209,19 @@ input, textarea { font-family: inherit; }
 /* ─── Container state animations (motion-safe) ─── */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes glow-pulse {
-    0%   { box-shadow: 0 0 8px rgba(74,222,128,0.3); }
-    50%  { box-shadow: 0 0 16px rgba(74,222,128,0.6); }
-    100% { box-shadow: 0 0 8px rgba(74,222,128,0.3); }
+    0%   { box-shadow: 0 0 8px color-mix(in srgb, var(--scene-glow-green, #4ade80) 30%, transparent); }
+    50%  { box-shadow: 0 0 16px color-mix(in srgb, var(--scene-glow-green, #4ade80) 60%, transparent); }
+    100% { box-shadow: 0 0 8px color-mix(in srgb, var(--scene-glow-green, #4ade80) 30%, transparent); }
   }
   @keyframes error-flash {
-    0%   { box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-    50%  { box-shadow: 0 0 20px rgba(239,68,68,0.8); }
-    100% { box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+    0%   { box-shadow: 0 0 8px color-mix(in srgb, var(--scene-glow-red, #ef4444) 40%, transparent); }
+    50%  { box-shadow: 0 0 20px color-mix(in srgb, var(--scene-glow-red, #ef4444) 80%, transparent); }
+    100% { box-shadow: 0 0 8px color-mix(in srgb, var(--scene-glow-red, #ef4444) 40%, transparent); }
   }
   @keyframes restart-pulse {
-    0%   { box-shadow: 0 0 8px rgba(251,191,36,0.3); }
-    50%  { box-shadow: 0 0 16px rgba(251,191,36,0.6); }
-    100% { box-shadow: 0 0 8px rgba(251,191,36,0.3); }
+    0%   { box-shadow: 0 0 8px color-mix(in srgb, var(--scene-glow-yellow, #fbbf24) 30%, transparent); }
+    50%  { box-shadow: 0 0 16px color-mix(in srgb, var(--scene-glow-yellow, #fbbf24) 60%, transparent); }
+    100% { box-shadow: 0 0 8px color-mix(in srgb, var(--scene-glow-yellow, #fbbf24) 30%, transparent); }
   }
 
   .rack-running    { animation: glow-pulse 2s ease-in-out infinite; }
