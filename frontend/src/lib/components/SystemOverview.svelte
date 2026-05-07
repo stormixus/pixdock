@@ -4,6 +4,7 @@
   import { initSound, playClick } from '$lib/stores/sound';
   import { currentScenePalette, applyScenePalette } from '$lib/stores/scenePalette';
   import ContainerDetail from './ContainerDetail.svelte';
+  import ExportButton from './ExportButton.svelte';
   import type { Container } from '$lib/utils/ws';
   import type { SwarmNode, SwarmService } from '$lib/utils/ws';
 
@@ -269,7 +270,7 @@
 
   // ─── PALETTE ───
   $effect(() => {
-    if (sceneCanvasEl) applyScenePalette($currentScenePalette, sceneCanvasEl);
+    applyScenePalette($currentScenePalette);
   });
 
   // ─── LIFECYCLE ───
@@ -404,6 +405,9 @@
     </div>
   </div>
 
+  <!-- ═══ EXPORT ═══ -->
+  <ExportButton />
+
   <!-- ═══ DETAIL CARDS ═══ -->
   <div class="detail-grid">
     <section class="detail-card pixel-border">
@@ -516,7 +520,7 @@
     background:
       linear-gradient(to bottom, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.3)),
       var(--bg-image, url('/assets/room_empty_bg.png')) center center / cover no-repeat;
-    background-color: var(--scene-floor, #0a0e1a);
+    background-color: var(--scene-bg-dark, #0a0e1a);
   }
 
   .scene-canvas::after {
@@ -548,8 +552,8 @@
     padding: 5px 7px;
     font-size: 6px;
     letter-spacing: 1px;
-    color: var(--scene-cable-b, #bdd0ec);
-    border: 2px solid var(--scene-cable-a, rgba(127, 198, 255, 0.85));
+    color: var(--scene-text-secondary, #bdd0ec);
+    border: 2px solid var(--scene-border-accent, rgba(127, 198, 255, 0.85));
     background: rgba(6, 14, 32, 0.8);
   }
 

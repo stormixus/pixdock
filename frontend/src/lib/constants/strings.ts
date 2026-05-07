@@ -28,4 +28,6 @@ export const UI_STRINGS = {
   CLOSE_LABEL: 'Close',
   DEMO_MODE_LABEL: 'Virtual Fleet (Showcase)',
   VOLUME_LABEL: 'Volume',
+  EXPORT_BUTTON_LOADING: 'Capturing...',
+  EXPORT_ERROR: 'Export may not capture all visual effects',
 } as const;

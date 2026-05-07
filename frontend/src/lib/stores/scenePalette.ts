@@ -3,115 +3,103 @@ import { writable } from 'svelte/store';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ScenePalette {
-  floor: string;      // scene background dark
-  wall: string;       // scene background light / shell
-  ceiling: string;    // scene ceiling / upper overlay
-  ambient: string;    // ambient light / rack frame accent
-  rackBody: string;   // rack body color
-  rackTrim: string;   // rack trim / primary border
-  ledIdle: string;    // LED idle/other state (yellow)
-  ledActive: string;  // LED running state (green)
-  ledError: string;   // LED stopped/error state (red)
-  cableA: string;     // accent border / primary cable
-  cableB: string;     // secondary text / secondary cable
-  screenBg: string;   // detail card background
-  screenText: string; // primary text (labels, names)
-  accentA: string;    // accent text A (highlights)
-  accentB: string;    // accent text B (secondary highlights)
-  shadow: string;     // shadow color
-}
-
-export interface ScenePalettePreset {
   name: string;
-  palette: ScenePalette;
+  bgDark: string;        // scene background dark
+  bgLight: string;       // scene background light
+  rackFrame: string;     // rack border/frame
+  rackBg: string;        // rack background
+  ledRunning: string;    // LED green (running)
+  ledStopped: string;    // LED red (stopped)
+  ledOther: string;      // LED yellow (other states)
+  textPrimary: string;   // primary text (labels, names)
+  textSecondary: string; // secondary text (counts, dims)
+  textAccent: string;    // accent text (highlights)
+  borderPrimary: string; // primary borders
+  borderAccent: string;  // accent borders (zone tags)
+  cardBg: string;        // detail card background
+  glowGreen: string;     // glow-pulse color
+  glowRed: string;       // error-flash color
+  glowYellow: string;    // restart-pulse color
 }
 
 // ─── Built-in presets ─────────────────────────────────────────────────────────
 
-export const scenePalettePresets: readonly ScenePalettePreset[] = [
+export const scenePalettePresets: readonly ScenePalette[] = [
   {
     name: 'Classic',
-    palette: {
-      floor: '#0a0e1a',
-      wall: '#040812',
-      ceiling: '#060a1b',
-      ambient: '#235a88',
-      rackBody: '#235a88',
-      rackTrim: '#354768',
-      ledIdle: '#facc15',
-      ledActive: '#4ade80',
-      ledError: '#ef4444',
-      cableA: 'rgba(127, 198, 255, 0.85)',
-      cableB: '#9fd1ef',
-      screenBg: 'rgba(7, 10, 24, 0.86)',
-      screenText: '#ecf8ff',
-      accentA: '#f2f7ff',
-      accentB: '#bdd0ec',
-      shadow: '#000000',
-    },
+    bgDark: '#0a0e1a',
+    bgLight: '#040812',
+    rackFrame: '#235a88',
+    rackBg: 'rgba(12, 19, 38, 0.92)',
+    ledRunning: '#4ade80',
+    ledStopped: '#ef4444',
+    ledOther: '#facc15',
+    textPrimary: '#ecf8ff',
+    textSecondary: '#9fd1ef',
+    textAccent: '#f2f7ff',
+    borderPrimary: '#354768',
+    borderAccent: 'rgba(127, 198, 255, 0.85)',
+    cardBg: 'rgba(7, 10, 24, 0.86)',
+    glowGreen: '#4ade80',
+    glowRed: '#ef4444',
+    glowYellow: '#fbbf24',
   },
   {
     name: 'Amber Terminal',
-    palette: {
-      floor: '#0d0800',
-      wall: '#1a1000',
-      ceiling: '#120900',
-      ambient: '#7a4800',
-      rackBody: '#7a4800',
-      rackTrim: '#5c3a00',
-      ledIdle: '#ffd060',
-      ledActive: '#ffb000',
-      ledError: '#ff4400',
-      cableA: 'rgba(255, 176, 0, 0.85)',
-      cableB: '#c8820a',
-      screenBg: 'rgba(20, 10, 0, 0.86)',
-      screenText: '#ffc840',
-      accentA: '#ffe880',
-      accentB: '#e8a020',
-      shadow: '#000000',
-    },
+    bgDark: '#0d0800',
+    bgLight: '#1a1000',
+    rackFrame: '#7a4800',
+    rackBg: 'rgba(30, 16, 0, 0.92)',
+    ledRunning: '#ffb000',
+    ledStopped: '#ff4400',
+    ledOther: '#ffd060',
+    textPrimary: '#ffc840',
+    textSecondary: '#c8820a',
+    textAccent: '#ffe880',
+    borderPrimary: '#5c3a00',
+    borderAccent: 'rgba(255, 176, 0, 0.85)',
+    cardBg: 'rgba(20, 10, 0, 0.86)',
+    glowGreen: '#ffb000',
+    glowRed: '#ff4400',
+    glowYellow: '#ffd060',
   },
   {
     name: 'Matrix',
-    palette: {
-      floor: '#000d00',
-      wall: '#001400',
-      ceiling: '#000800',
-      ambient: '#003300',
-      rackBody: '#003300',
-      rackTrim: '#002200',
-      ledIdle: '#00cc00',
-      ledActive: '#00ff41',
-      ledError: '#ff0000',
-      cableA: 'rgba(0, 255, 65, 0.85)',
-      cableB: '#008f11',
-      screenBg: 'rgba(0, 10, 0, 0.86)',
-      screenText: '#00ff41',
-      accentA: '#00ff41',
-      accentB: '#00cc33',
-      shadow: '#000000',
-    },
+    bgDark: '#000d00',
+    bgLight: '#001400',
+    rackFrame: '#003300',
+    rackBg: 'rgba(0, 12, 0, 0.92)',
+    ledRunning: '#00ff41',
+    ledStopped: '#ff0000',
+    ledOther: '#00cc00',
+    textPrimary: '#00ff41',
+    textSecondary: '#008f11',
+    textAccent: '#00ff41',
+    borderPrimary: '#003300',
+    borderAccent: 'rgba(0, 255, 65, 0.85)',
+    cardBg: 'rgba(0, 10, 0, 0.86)',
+    glowGreen: '#00ff41',
+    glowRed: '#ff0000',
+    glowYellow: '#00cc00',
   },
   {
     name: 'Ice',
-    palette: {
-      floor: '#000d1a',
-      wall: '#00101f',
-      ceiling: '#000e18',
-      ambient: '#0047ab',
-      rackBody: '#0047ab',
-      rackTrim: '#0a4a6e',
-      ledIdle: '#80ffff',
-      ledActive: '#00cfff',
-      ledError: '#ff4466',
-      cableA: 'rgba(0, 207, 255, 0.85)',
-      cableB: '#7fd4f0',
-      screenBg: 'rgba(0, 12, 28, 0.86)',
-      screenText: '#e0f7ff',
-      accentA: '#ffffff',
-      accentB: '#a0e8ff',
-      shadow: '#000000',
-    },
+    bgDark: '#000d1a',
+    bgLight: '#00101f',
+    rackFrame: '#0047ab',
+    rackBg: 'rgba(0, 20, 40, 0.92)',
+    ledRunning: '#00cfff',
+    ledStopped: '#ff4466',
+    ledOther: '#80ffff',
+    textPrimary: '#e0f7ff',
+    textSecondary: '#7fd4f0',
+    textAccent: '#ffffff',
+    borderPrimary: '#0a4a6e',
+    borderAccent: 'rgba(0, 207, 255, 0.85)',
+    cardBg: 'rgba(0, 12, 28, 0.86)',
+    glowGreen: '#00cfff',
+    glowRed: '#ff4466',
+    glowYellow: '#80ffff',
   },
 ];
 
@@ -124,18 +112,18 @@ function loadFromStorage(): ScenePalette {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as ScenePalette;
-      if (parsed && typeof parsed.floor === 'string') {
+      if (parsed && typeof parsed.bgDark === 'string') {
         return parsed;
       }
     }
   } catch {
     // ignore storage errors
   }
-  return scenePalettePresets[0].palette;
+  return scenePalettePresets[0];
 }
 
 function createScenePaletteStore() {
-  const initial = typeof window !== 'undefined' ? loadFromStorage() : scenePalettePresets[0].palette;
+  const initial = typeof window !== 'undefined' ? loadFromStorage() : scenePalettePresets[0];
   const { subscribe, set, update } = writable<ScenePalette>(initial);
 
   return {
@@ -156,21 +144,24 @@ export const currentScenePalette = createScenePaletteStore();
 
 // ─── Apply ────────────────────────────────────────────────────────────────────
 
-export function applyScenePalette(palette: ScenePalette, el: HTMLElement): void {
-  el.style.setProperty('--scene-floor', palette.floor);
-  el.style.setProperty('--scene-wall', palette.wall);
-  el.style.setProperty('--scene-ceiling', palette.ceiling);
-  el.style.setProperty('--scene-ambient', palette.ambient);
-  el.style.setProperty('--scene-rack-body', palette.rackBody);
-  el.style.setProperty('--scene-rack-trim', palette.rackTrim);
-  el.style.setProperty('--scene-led-idle', palette.ledIdle);
-  el.style.setProperty('--scene-led-active', palette.ledActive);
-  el.style.setProperty('--scene-led-error', palette.ledError);
-  el.style.setProperty('--scene-cable-a', palette.cableA);
-  el.style.setProperty('--scene-cable-b', palette.cableB);
-  el.style.setProperty('--scene-screen-bg', palette.screenBg);
-  el.style.setProperty('--scene-screen-text', palette.screenText);
-  el.style.setProperty('--scene-accent-a', palette.accentA);
-  el.style.setProperty('--scene-accent-b', palette.accentB);
-  el.style.setProperty('--scene-shadow', palette.shadow);
+export function applyScenePalette(palette: ScenePalette): void {
+  const el = document.querySelector('.scene-canvas') as HTMLElement | null;
+  if (!el) return;
+
+  el.style.setProperty('--scene-bg-dark', palette.bgDark);
+  el.style.setProperty('--scene-bg-light', palette.bgLight);
+  el.style.setProperty('--scene-rack-frame', palette.rackFrame);
+  el.style.setProperty('--scene-rack-bg', palette.rackBg);
+  el.style.setProperty('--scene-led-running', palette.ledRunning);
+  el.style.setProperty('--scene-led-stopped', palette.ledStopped);
+  el.style.setProperty('--scene-led-other', palette.ledOther);
+  el.style.setProperty('--scene-text-primary', palette.textPrimary);
+  el.style.setProperty('--scene-text-secondary', palette.textSecondary);
+  el.style.setProperty('--scene-text-accent', palette.textAccent);
+  el.style.setProperty('--scene-border-primary', palette.borderPrimary);
+  el.style.setProperty('--scene-border-accent', palette.borderAccent);
+  el.style.setProperty('--scene-card-bg', palette.cardBg);
+  el.style.setProperty('--scene-glow-green', palette.glowGreen);
+  el.style.setProperty('--scene-glow-red', palette.glowRed);
+  el.style.setProperty('--scene-glow-yellow', palette.glowYellow);
 }
